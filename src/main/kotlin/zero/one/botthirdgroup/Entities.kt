@@ -1,6 +1,7 @@
 package zero.one.botthirdgroup
 
 import org.hibernate.annotations.ColumnDefault
+import java.sql.Timestamp
 import javax.persistence.*
 
 @MappedSuperclass
@@ -53,6 +54,7 @@ class AttachmentContent(
 @Entity
 class Message(
     var telegramMessageId: Long,
+    var time: Timestamp,
     @ManyToOne var session: Session,
     @ManyToOne var user: User,
     var text: String?
