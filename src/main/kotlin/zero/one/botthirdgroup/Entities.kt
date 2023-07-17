@@ -19,8 +19,9 @@ class User(
     @ManyToMany var languages: MutableList<Language>?,
     @Enumerated(EnumType.STRING) var botState: BotState?
 
-
-) : BaseEntity()
+) : BaseEntity(){
+    constructor(chatId: String):this(null,null,chatId,null,null,null)
+}
 @Entity
 class Language(
     @Enumerated(EnumType.STRING) var name: LanguageName

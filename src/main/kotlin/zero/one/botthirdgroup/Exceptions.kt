@@ -19,6 +19,9 @@ sealed class BotException(message: String? = null) : RuntimeException(message) {
     }
 }
 
-class ChatIdExistsException(val userName: String) : BotException() {
+class ChatIdExistsException(val chatId: String) : BotException() {
     override fun errorType() = ErrorCode.CHAT_ID_EXISTS
+}
+class UserNotFoundException(val chatId: String) : BotException() {
+    override fun errorType() = ErrorCode.USER_NOT_FOUND
 }
