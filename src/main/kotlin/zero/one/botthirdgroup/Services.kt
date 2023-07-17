@@ -3,8 +3,8 @@ package zero.one.botthirdgroup
 import org.springframework.stereotype.Service
 
 interface UserService {
-    fun create(chatId: String): User
-    fun update(chatId: String, dto: UserUpdateDto)
+    fun createOrTgUser(chatId: String): User
+    fun update(user: User)
 
 }
 
@@ -12,13 +12,13 @@ interface UserService {
 class UserServiceImpl(
     private val userRepository: UserRepository
 ) : UserService {
-    override fun create(chatId: String): User {
-        return userRepository.save(User(chatId))
+    override fun createOrTgUser(chatId: String): User {
+        return userRepository.findByChatIdAndDeletedFalse(chatId)
+            ?: userRepository.save(User(chatId))
     }
 
-    override fun update(chatId: String, dto: UserUpdateDto) {
-        val user = userRepository.findByChatIdAndDeletedFalse(chatId)
-        dto.run {
+    override fun update(user: User) {
+        user.run {
             role?.let { user.role = role }
             botState?.let { user.botState = botState }
             languages?.let { user.languages = languages as MutableList<Language> }
@@ -26,7 +26,6 @@ class UserServiceImpl(
         }
         userRepository.save(user)
     }
-
 }
 
 
