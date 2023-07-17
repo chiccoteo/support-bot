@@ -11,7 +11,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 
 
 @Service
-class TelegramBotService : TelegramLongPollingBot() {
+class TelegramBotService(
+    private val userRepository: UserRepository
+) : TelegramLongPollingBot() {
 
     @Value("\${telegram.bot.username}")
     private val username: String = ""
@@ -28,13 +30,15 @@ class TelegramBotService : TelegramLongPollingBot() {
     override fun onUpdateReceived(update: Update?) {
         if (update!!.hasMessage()) {
             val message = update.message
-            val chatId = message.chatId
+            val chatId = message.chatId.toString()
+
+            val user: User = getUser(chatId)
 
             if (message.hasText()) {
                 val text = message.text
                 when {
                     text.equals("/start") -> {
-                        sendNotification(chatId, "Hello ${message.from.firstName}")
+                        chooseLanguage(chatId, "Hello ${message.from.firstName}")
                     }
 
                     text.equals("Uz \uD83C\uDDFA\uD83C\uDDFF") -> sendContactRequest(
@@ -62,7 +66,12 @@ class TelegramBotService : TelegramLongPollingBot() {
         }
     }
 
-    private fun sendContactRequest(chatId: Long?, contactButtonTxt: String) {
+    private fun getUser(chatId: String): User {
+        return userRepository.findByChatIdAndDeletedFalse(chatId)
+            ?: userRepository.save(User(chatId))
+    }
+
+    private fun sendContactRequest(chatId: String?, contactButtonTxt: String) {
         val sendMessage = SendMessage()
         val rows: MutableList<KeyboardRow> = mutableListOf()
 
@@ -74,7 +83,7 @@ class TelegramBotService : TelegramLongPollingBot() {
         rows.add(row1)
 
         sendMessage.text = contactButtonTxt
-        sendMessage.chatId = chatId.toString()
+        chatId.also { sendMessage.chatId = it.toString() }
 
 
         val markup = ReplyKeyboardMarkup()
@@ -86,7 +95,36 @@ class TelegramBotService : TelegramLongPollingBot() {
 
     }
 
-    private fun sendNotification(chatId: Long?, responseText: String) {
+    private fun chooseLanguage(chatId: String?, name: String) {
+        val sendMessage = SendMessage()
+        val rows: MutableList<KeyboardRow> = mutableListOf()
+
+        val row1 = KeyboardRow()
+
+        val ruButton = KeyboardButton("Ru \uD83C\uDDF7\uD83C\uDDFA")
+        val engButton = KeyboardButton("Eng \uD83C\uDDFA\uD83C\uDDF8")
+        val uzButton = KeyboardButton("Uz \uD83C\uDDFA\uD83C\uDDFF")
+        row1.add(uzButton)
+        row1.add(ruButton)
+        row1.add(engButton)
+        rows.add(row1)
+
+        sendMessage.text = "Assalamu alaykum $name!\n" +
+                "Botga xush kelibsiz. Iltimos tilni tanlang\n" +
+                "Здрасвуйте $name!\n" +
+                "Добро пожаловать в бота. Пожалуйста, выберите язык\n" +
+                "Hello $name!\n" +
+                "Welcome to the bot. Please select a language"
+        sendMessage.chatId = chatId.toString()
+
+        val markup = ReplyKeyboardMarkup()
+        markup.resizeKeyboard = true
+        markup.keyboard = rows
+        sendMessage.replyMarkup = markup
+        execute(sendMessage)
+    }
+
+    private fun sendNotification(chatId: String?, responseText: String) {
 
         val sendMessage = SendMessage()
         val rows: MutableList<KeyboardRow> = mutableListOf()
@@ -104,7 +142,6 @@ class TelegramBotService : TelegramLongPollingBot() {
         sendMessage.text = responseText
         sendMessage.chatId = chatId.toString()
 
-
         val markup = ReplyKeyboardMarkup()
         markup.resizeKeyboard = true
         markup.keyboard = rows
@@ -112,5 +149,6 @@ class TelegramBotService : TelegramLongPollingBot() {
         execute(sendMessage)
 
     }
+
 
 }

@@ -41,7 +41,7 @@ class BaseRepositoryImpl<T : BaseEntity>(
 }
 interface UserRepository : BaseRepository<User> {
     fun existsByChatId(chatId: String): Boolean
-    fun findByChatId(chatId: String): User
+    fun findByChatIdAndDeletedFalse(chatId: String): User?
     fun getUserByBotState(botState: BotState): List<User>
     fun getUserByRole(role: Role): List<User>
 }

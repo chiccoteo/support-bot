@@ -17,11 +17,12 @@ class User(
     var chatId: String,
     @Enumerated(EnumType.STRING) var role: Role?,
     @ManyToMany var languages: MutableList<Language>?,
-    @Enumerated(EnumType.STRING) var botState: BotState?
+    @Enumerated(EnumType.STRING) var botState: BotState = BotState.START
 
-) : BaseEntity(){
-    constructor(chatId: String):this(null,null,chatId,null,null,null)
+) : BaseEntity() {
+    constructor(chatId: String) : this(null, null, chatId, null, null)
 }
+
 @Entity
 class Language(
     @Enumerated(EnumType.STRING) var name: LanguageName

@@ -47,13 +47,6 @@ class UserServiceImpl(
     override fun getUserByBotState(botState: BotState) =
         userRepository.getUserByBotState(botState).map { GetOneUserDto.toDto(it) }
 
-    override fun getAll(pageable: Pageable): Page<GetOneUserDto> {
-        TODO("Not yet implemented")
-    }
-
-    override fun delete(id: Long) {
-        TODO("Not yet implemented")
-    }
 }
 
 
