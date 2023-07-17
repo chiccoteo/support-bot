@@ -40,7 +40,10 @@ class BaseRepositoryImpl<T : BaseEntity>(
     override fun trashList(ids: List<Long>): List<T?> = ids.map { trash(it) }
 }
 interface UserRepository : BaseRepository<User> {
-    fun existsByChatId(chatId:String):Boolean
+    fun existsByChatId(chatId: String): Boolean
+    fun findByChatId(chatId: String): User
+    fun getUserByBotState(botState: BotState): List<User>
+    fun getUserByRole(role: Role): List<User>
 }
 
 interface MessageRepository : BaseRepository<Message> {

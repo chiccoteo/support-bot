@@ -28,26 +28,29 @@ data class GetToMessageDTO(
 
 data class BaseMessage(val code: Int, val message: String?)
 data class UserCreateDto(
-    val chatId:String
-){
-//    fun toEntity() = User(chatId)
+    val chatId: String
+) {
+    fun toEntity() = User(chatId)
 }
+
 data class UserUpdateDto(
-    val userName: String?,
-    val fullname: String?,
+    val role: Role?,
+    val languages: List<Language>?,
+    val botState: BotState?
 )
 
 data class GetOneUserDto(
-    val userName: String,
-    val fullname: String,
-    val balance: BigDecimal,
+    val name: String,
+    val chatId: String,
+    val phoneNumber: String,
+    val role: Role
 ) {
-//    companion object {
-//        fun toDto(user: User): GetOneUserDto {
-//            return user.run {
-//                GetOneUserDto(userName, fullName, balance)
-//            }
-//        }
-//    }
+    companion object {
+        fun toDto(user: User): GetOneUserDto {
+            return user.run {
+                GetOneUserDto(name!!, chatId, phoneNumber!!, role!!)
+            }
+        }
+    }
 
 }
