@@ -42,3 +42,7 @@ class BaseRepositoryImpl<T : BaseEntity>(
 interface UserRepository : BaseRepository<User> {
     fun existsByChatId(chatId:String):Boolean
 }
+
+interface MessageRepository : BaseRepository<Message> {
+
+}
