@@ -13,7 +13,8 @@ enum class LanguageName {
 }
 
 enum class BotState {
-    START
+    START,
+    ONLINE
 }
 
 enum class ErrorCode(val code: Int){

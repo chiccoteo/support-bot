@@ -21,6 +21,7 @@ class User(
 
 
 ) : BaseEntity()
+
 @Entity
 class Language(
     @Enumerated(EnumType.STRING) var name: LanguageName
@@ -43,12 +44,11 @@ class Attachment(
     var originalName: String,
     var contentType: String,
     var size: Long,
-    @ManyToOne var message: Message
 ) : BaseEntity()
 
 @Entity
 class AttachmentContent(
-    var byte: Byte,
+    var byte: ByteArray,
     @OneToOne var attachment: Attachment
 ) : BaseEntity()
 
@@ -58,5 +58,6 @@ class Message(
     var time: Timestamp,
     @ManyToOne var session: Session,
     @ManyToOne var user: User,
-    var text: String?
+    var text: String?,
+    @OneToOne var attachment: Attachment?
 ) : BaseEntity()

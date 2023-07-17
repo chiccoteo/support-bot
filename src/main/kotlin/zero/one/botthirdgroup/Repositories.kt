@@ -39,10 +39,23 @@ class BaseRepositoryImpl<T : BaseEntity>(
     override fun findAllNotDeleted(pageable: Pageable): Page<T> = findAll(isNotDeletedSpecification, pageable)
     override fun trashList(ids: List<Long>): List<T?> = ids.map { trash(it) }
 }
+
 interface UserRepository : BaseRepository<User> {
-    fun existsByChatId(chatId:String):Boolean
+    fun existsByChatId(chatId: String): Boolean
+    fun findByChatIdAndDeletedFalse(chatId: String): User
+    fun findAllByBotStateAndLanguagesIsContainingAndDeletedFalse(botState: BotState, languages: Language): List<User>?
 }
 
-interface MessageRepository : BaseRepository<Message> {
+interface MessageRepository : BaseRepository<Message>
 
+interface ChatRepository : BaseRepository<Chat>
+
+interface SessionRepository : BaseRepository<Session> {
+    fun findByChatUserChatIdOrChatOperatorChatIdAndStatusTrue(userChatId: String, operatorChatId: String): Session?
+    fun existsByStatusTrueAndChatOperator(chatOperator: User): Boolean
+    fun findByChatUserChatIdAndChatOperatorChatId(userChatId: String, operatorChatId: String): Session?
 }
+
+interface AttachmentRepository : BaseRepository<Attachment>
+
+interface AttachmentContentRepository : BaseRepository<AttachmentContent>
