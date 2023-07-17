@@ -1,6 +1,5 @@
 package zero.one.botthirdgroup
 
-import java.math.BigDecimal
 import java.sql.Timestamp
 
 data class MessageCreateDTO(
@@ -26,31 +25,9 @@ data class GetToMessageDTO(
     val attachmentsId: List<Long>?
 )
 
-data class BaseMessage(val code: Int, val message: String?)
-data class UserCreateDto(
-    val chatId: String
-) {
-    fun toEntity() = User(chatId)
-}
-
 data class UserUpdateDto(
     val role: Role?,
     val languages: List<Language>?,
-    val botState: BotState?
+    val botState: BotState?,
+    val phoneNumber: String?
 )
-
-data class GetOneUserDto(
-    val name: String,
-    val chatId: String,
-    val phoneNumber: String,
-    val role: Role
-) {
-    companion object {
-        fun toDto(user: User): GetOneUserDto {
-            return user.run {
-                GetOneUserDto(name!!, chatId, phoneNumber!!, role!!)
-            }
-        }
-    }
-
-}
