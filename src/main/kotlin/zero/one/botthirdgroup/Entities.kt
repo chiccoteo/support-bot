@@ -12,14 +12,15 @@ class BaseEntity(
 
 @Entity(name = "users")
 class User(
-    var name: String,
-    var phoneNumber: String,
-    var chatId: Long,
-    @Enumerated(EnumType.STRING) var role: Role,
-    @ManyToMany var languages: MutableList<Language>,
-    @Enumerated(EnumType.STRING) var botState: BotState,
-) : BaseEntity()
+    var name: String?,
+    var phoneNumber: String?,
+    var chatId: String,
+    @Enumerated(EnumType.STRING) var role: Role?,
+    @ManyToMany var languages: MutableList<Language>?,
+    @Enumerated(EnumType.STRING) var botState: BotState?
 
+
+) : BaseEntity()
 @Entity
 class Language(
     @Enumerated(EnumType.STRING) var name: LanguageName
