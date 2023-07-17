@@ -15,3 +15,7 @@ enum class LanguageName {
 enum class BotState {
     START
 }
+
+enum class ErrorCode(val code: Int){
+    CHAT_ID_EXISTS(100)
+}
