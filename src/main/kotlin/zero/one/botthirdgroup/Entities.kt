@@ -16,11 +16,11 @@ class User(
     var phoneNumber: String?,
     var chatId: String,
     @Enumerated(EnumType.STRING) var role: Role?,
-    @ManyToMany var languages: MutableList<Language>?,
+    @ManyToMany(fetch = FetchType.EAGER) var languages: MutableList<Language?>,
     @Enumerated(EnumType.STRING) var botState: BotState = BotState.START
 
 ) : BaseEntity() {
-    constructor(chatId: String) : this(null, null, chatId, null, null)
+    constructor(chatId: String) : this(null, null, chatId, null, mutableListOf())
 }
 
 @Entity

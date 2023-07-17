@@ -1,7 +1,11 @@
 package zero.one.botthirdgroup
 
+import org.springframework.stereotype.Component
+
+@Component
 
 class LanguageUtil {
+
 
     fun contactButtonTxt(lang: LanguageName): String {
         return when (lang) {

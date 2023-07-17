@@ -20,8 +20,8 @@ class UserServiceImpl(
     override fun update(user: User) {
         user.run {
             role?.let { user.role = role }
-            botState?.let { user.botState = botState }
-            languages?.let { user.languages = languages as MutableList<Language> }
+            botState.let { user.botState = botState }
+            languages.let { user.languages = languages }
             phoneNumber?.let { user.phoneNumber = phoneNumber }
         }
         userRepository.save(user)

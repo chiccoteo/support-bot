@@ -39,10 +39,11 @@ class BaseRepositoryImpl<T : BaseEntity>(
     override fun findAllNotDeleted(pageable: Pageable): Page<T> = findAll(isNotDeletedSpecification, pageable)
     override fun trashList(ids: List<Long>): List<T?> = ids.map { trash(it) }
 }
+
 interface UserRepository : BaseRepository<User> {
     fun findByChatIdAndDeletedFalse(chatId: String): User?
 }
 
-interface MessageRepository : BaseRepository<Message> {
-
+interface LanguageRepository : BaseRepository<Language> {
+    fun findByName(name: LanguageName): Language
 }

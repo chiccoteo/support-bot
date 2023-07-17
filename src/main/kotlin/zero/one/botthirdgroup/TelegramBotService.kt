@@ -12,7 +12,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 
 @Service
 class TelegramBotService(
-    private val userRepository: UserRepository
+    private val userService: UserService,
+    private val languageUtil: LanguageUtil,
+    private val languageRepository: LanguageRepository
 ) : TelegramLongPollingBot() {
 
     @Value("\${telegram.bot.username}")
@@ -32,33 +34,64 @@ class TelegramBotService(
             val message = update.message
             val chatId = message.chatId.toString()
 
-            val user: User = getUser(chatId)
-
+            val user = userService.createOrTgUser(chatId)
+            val userLang: LanguageName? = if (user.languages.isEmpty())
+                null
+            else
+                user.languages[0]?.name
             if (message.hasText()) {
                 val text = message.text
                 when {
                     text.equals("/start") -> {
-                        chooseLanguage(chatId, "Hello ${message.from.firstName}")
+                        if (userLang == null) {
+                            chooseLanguage(user, "${message.from.firstName}")
+                        } else if (user.phoneNumber == null) {
+                            sendContactRequest(user, languageUtil.contactButtonTxt(userLang))
+                        }
+
                     }
 
-                    text.equals("Uz \uD83C\uDDFA\uD83C\uDDFF") -> sendContactRequest(
-                        chatId,
-                        LanguageUtil().contactButtonTxt(LanguageName.UZ)
-                    )
 
-                    text.equals("Ru \uD83C\uDDF7\uD83C\uDDFA") -> sendContactRequest(
-                        chatId,
-                        LanguageUtil().contactButtonTxt(LanguageName.RU)
-                    )
+                    user.botState == BotState.CHOOSE_LANG -> {
+                        when (text) {
+                            "Uz \uD83C\uDDFA\uD83C\uDDFF" -> {
+                                user.languages = mutableListOf(languageRepository.findByName(LanguageName.UZ))
+                                sendContactRequest(
+                                    user,
+                                    languageUtil.contactButtonTxt(LanguageName.UZ)
+                                )
+                            }
 
-                    text.equals("Eng \uD83C\uDDFA\uD83C\uDDF8") -> sendContactRequest(
-                        chatId,
-                        LanguageUtil().contactButtonTxt(LanguageName.ENG)
-                    )
+                            "Ru \uD83C\uDDF7\uD83C\uDDFA" -> {
+                                user.languages = mutableListOf(languageRepository.findByName(LanguageName.RU))
+                                sendContactRequest(
+                                    user,
+                                    languageUtil.contactButtonTxt(LanguageName.RU)
+                                )
+                            }
+
+                            "Eng \uD83C\uDDFA\uD83C\uDDF8" -> {
+                                user.languages = mutableListOf(languageRepository.findByName(LanguageName.ENG))
+                                sendContactRequest(
+                                    user,
+                                    languageUtil.contactButtonTxt(LanguageName.ENG)
+                                )
+                            }
+
+                            else -> "Pashol"
+                        }
+                        user.botState = BotState.SHARE_CONTACT
+                        userService.update(user)
+                    }
+
 
                     else -> sendNotification(chatId, "Your text : $text")
                 }
-            } else {
+            } else if (message.hasContact()) {
+                val contact = message.contact
+                user.phoneNumber = contact.phoneNumber
+                user.name = contact.firstName + " " + contact?.lastName
+                userService.update(user)
 
             }
 
@@ -66,12 +99,8 @@ class TelegramBotService(
         }
     }
 
-    private fun getUser(chatId: String): User {
-        return userRepository.findByChatIdAndDeletedFalse(chatId)
-            ?: userRepository.save(User(chatId))
-    }
 
-    private fun sendContactRequest(chatId: String?, contactButtonTxt: String) {
+    private fun sendContactRequest(user: User, contactButtonTxt: String) {
         val sendMessage = SendMessage()
         val rows: MutableList<KeyboardRow> = mutableListOf()
 
@@ -83,7 +112,7 @@ class TelegramBotService(
         rows.add(row1)
 
         sendMessage.text = contactButtonTxt
-        chatId.also { sendMessage.chatId = it.toString() }
+        user.chatId.also { sendMessage.chatId = it }
 
 
         val markup = ReplyKeyboardMarkup()
@@ -95,7 +124,7 @@ class TelegramBotService(
 
     }
 
-    private fun chooseLanguage(chatId: String?, name: String) {
+    private fun chooseLanguage(user: User, name: String) {
         val sendMessage = SendMessage()
         val rows: MutableList<KeyboardRow> = mutableListOf()
 
@@ -115,13 +144,17 @@ class TelegramBotService(
                 "Добро пожаловать в бота. Пожалуйста, выберите язык\n" +
                 "Hello $name!\n" +
                 "Welcome to the bot. Please select a language"
-        sendMessage.chatId = chatId.toString()
+        sendMessage.chatId = user.chatId
+
 
         val markup = ReplyKeyboardMarkup()
         markup.resizeKeyboard = true
         markup.keyboard = rows
         sendMessage.replyMarkup = markup
         execute(sendMessage)
+
+        user.botState = BotState.CHOOSE_LANG
+        userService.update(user)
     }
 
     private fun sendNotification(chatId: String?, responseText: String) {
