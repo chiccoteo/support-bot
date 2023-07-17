@@ -41,21 +41,9 @@ class BaseRepositoryImpl<T : BaseEntity>(
 }
 
 interface UserRepository : BaseRepository<User> {
-    fun existsByChatId(chatId: String): Boolean
-    fun findByChatIdAndDeletedFalse(chatId: String): User
-    fun findAllByBotStateAndLanguagesIsContainingAndDeletedFalse(botState: BotState, languages: Language): List<User>?
+    fun findByChatIdAndDeletedFalse(chatId: String): User?
 }
 
-interface MessageRepository : BaseRepository<Message>
-
-interface ChatRepository : BaseRepository<Chat>
-
-interface SessionRepository : BaseRepository<Session> {
-    fun findByChatUserChatIdOrChatOperatorChatIdAndStatusTrue(userChatId: String, operatorChatId: String): Session?
-    fun existsByStatusTrueAndChatOperator(chatOperator: User): Boolean
-    fun findByChatUserChatIdAndChatOperatorChatId(userChatId: String, operatorChatId: String): Session?
+interface LanguageRepository : BaseRepository<Language> {
+    fun findByName(name: LanguageName): Language
 }
-
-interface AttachmentRepository : BaseRepository<Attachment>
-
-interface AttachmentContentRepository : BaseRepository<AttachmentContent>

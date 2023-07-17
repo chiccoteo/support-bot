@@ -16,11 +16,12 @@ class User(
     var phoneNumber: String?,
     var chatId: String,
     @Enumerated(EnumType.STRING) var role: Role?,
-    @ManyToMany var languages: MutableList<Language>?,
-    @Enumerated(EnumType.STRING) var botState: BotState?
+    @ManyToMany(fetch = FetchType.EAGER) var languages: MutableList<Language?>,
+    @Enumerated(EnumType.STRING) var botState: BotState = BotState.START
 
-
-) : BaseEntity()
+) : BaseEntity() {
+    constructor(chatId: String) : this(null, null, chatId, null, mutableListOf())
+}
 
 @Entity
 class Language(
@@ -44,11 +45,12 @@ class Attachment(
     var originalName: String,
     var contentType: String,
     var size: Long,
+    @ManyToOne var message: Message
 ) : BaseEntity()
 
 @Entity
 class AttachmentContent(
-    var byte: ByteArray,
+    var byte: Byte,
     @OneToOne var attachment: Attachment
 ) : BaseEntity()
 
@@ -58,6 +60,5 @@ class Message(
     var time: Timestamp,
     @ManyToOne var session: Session,
     @ManyToOne var user: User,
-    var text: String?,
-    @OneToOne var attachment: Attachment?
+    var text: String?
 ) : BaseEntity()

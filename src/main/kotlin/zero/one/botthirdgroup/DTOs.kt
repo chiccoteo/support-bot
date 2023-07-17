@@ -1,53 +1,33 @@
 package zero.one.botthirdgroup
 
-import org.springframework.web.multipart.MultipartFile
-import java.math.BigDecimal
 import java.sql.Timestamp
 
 data class MessageCreateDTO(
     val telegramMessageId: Long,
     val time: Timestamp,
-    val senderChatId: String,
+    val senderChatId: Long,
     val text: String?,
-    val attachment: MultipartFile?
-) {
-    fun toEntity(session: Session, user: User, attachment: Attachment) =
-        Message(telegramMessageId, time, session, user, text, attachment)
-}
+    val attachmentsId: List<Long>?
+)
 
 data class GetMessageDTO(
     val telegramMessageId: Long,
     val time: Timestamp,
     val sessionId: Long,
-    val senderChatId: String,
+    val senderChatId: Long,
     val text: String?,
-    val attachmentId: Long?
+    val attachmentsId: List<Long>?
 )
 
-
-data class BaseMessage(val code: Int, val message: String?)
-data class UserCreateDto(
-    val chatId: String
-) {
-//    fun toEntity() = User(chatId)
-}
+data class GetToMessageDTO(
+    val toUserId: Long,
+    val text: String?,
+    val attachmentsId: List<Long>?
+)
 
 data class UserUpdateDto(
-    val userName: String?,
-    val fullname: String?,
+    val role: Role?,
+    val languages: List<Language>?,
+    val botState: BotState?,
+    val phoneNumber: String?
 )
-
-data class GetOneUserDto(
-    val userName: String,
-    val fullname: String,
-    val balance: BigDecimal,
-) {
-//    companion object {
-//        fun toDto(user: User): GetOneUserDto {
-//            return user.run {
-//                GetOneUserDto(userName, fullName, balance)
-//            }
-//        }
-//    }
-
-}

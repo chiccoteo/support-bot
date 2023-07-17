@@ -1,43 +1,31 @@
 package zero.one.botthirdgroup
 
-import org.springframework.data.domain.Page
-import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 
 interface UserService {
-    fun create(dto: UserCreateDto)
-    fun update(id: Long, dto: UserUpdateDto)
-    fun getOne(id: Long): GetOneUserDto
-    fun getAll(pageable: Pageable): Page<GetOneUserDto>
-    fun delete(id: Long)
+    fun createOrTgUser(chatId: String): User
+    fun update(user: User)
+
 }
 
 @Service
 class UserServiceImpl(
     private val userRepository: UserRepository
 ) : UserService {
-    override fun create(dto: UserCreateDto) {
-        dto.run {
-            if (userRepository.existsByChatId(chatId)) throw ChatIdExistsException(chatId)
-//            userRepository.save(toEntity())
+    override fun createOrTgUser(chatId: String): User {
+        return userRepository.findByChatIdAndDeletedFalse(chatId)
+            ?: userRepository.save(User(chatId))
+    }
+
+    override fun update(user: User) {
+        user.run {
+            role?.let { user.role = role }
+            botState.let { user.botState = botState }
+            languages.let { user.languages = languages }
+            phoneNumber?.let { user.phoneNumber = phoneNumber }
         }
-    }
-
-    override fun update(id: Long, dto: UserUpdateDto) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getOne(id: Long): GetOneUserDto {
-        TODO("Not yet implemented")
-    }
-
-    override fun getAll(pageable: Pageable): Page<GetOneUserDto> {
-        TODO("Not yet implemented")
-    }
-
-    override fun delete(id: Long) {
-        TODO("Not yet implemented")
+        userRepository.save(user)
     }
 }
 
