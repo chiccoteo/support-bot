@@ -9,12 +9,14 @@ import org.telegram.telegrambots.meta.api.methods.GetFile
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
+import org.telegram.telegrambots.meta.api.objects.InputFile
 import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.sql.Timestamp
@@ -269,7 +271,7 @@ class TelegramBotService(
         execute(sendMessage)
     }
 
-    fun create(fileId: String, fileName: String, contentType: AttachmentContentType) {
+    fun create(fileId: String, fileName: String, contentType: AttachmentContentType):Attachment {
         val strings = fileName.split(".")
         val fromTelegram = getFromTelegram(fileId, botToken)
         val path = Paths.get(
@@ -277,7 +279,7 @@ class TelegramBotService(
                     UUID.randomUUID().toString() + "." + strings[strings.size - 1]
         )
         Files.copy(ByteArrayInputStream(fromTelegram), path)
-        attachmentRepo.save(Attachment(path.toString(), contentType))
+        return attachmentRepo.save(Attachment(path.toString(), contentType))
     }
 
 
