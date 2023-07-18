@@ -130,22 +130,11 @@ class MessageServiceImpl(
 }
 
 interface AttachmentService {
-    fun create(fileId: String, fileName: String, contentType: AttachmentContentType)
 }
 
 @Service
 class AttachmentServiceImpl(
-    private val botService: TelegramBotService,
     private val attachmentRepo: AttachmentRepository
 ) : AttachmentService {
-    override fun create(fileId: String, fileName: String, contentType: AttachmentContentType) {
-        val strings = fileName.split(".")
-        val fromTelegram = botService.getFromTelegram(fileId, botService.botToken)
-        val path = Paths.get(
-            "files/" +
-                    UUID.randomUUID().toString() + "." + strings[strings.size - 1]
-        )
-        Files.copy(ByteArrayInputStream(fromTelegram), path)
-        attachmentRepo.save(Attachment(path.toString(), contentType))
-    }
+
 }
