@@ -30,7 +30,7 @@ interface MessageService {
 @Service
 class UserServiceImpl(
     private val userRepository: UserRepository,
-    private val languageRepository: LanguageRepository
+    private val languageRepository: LanguageRepository,
 ) : UserService {
     override fun createOrTgUser(chatId: String): User {
         return userRepository.findByChatIdAndDeletedFalse(chatId)
@@ -79,6 +79,7 @@ class MessageServiceImpl(
     private val sessionRepo: SessionRepository,
     private val messageRepo: MessageRepository,
     private val attachmentService: AttachmentService,
+    private val languageRepository: LanguageRepository,
 ) : MessageService {
     override fun create(messageDTO: MessageDTO): MessageDTO? {
         messageDTO.run {
@@ -102,7 +103,7 @@ class MessageServiceImpl(
                     }
                 } ?: userRepo.findAllByBotStateAndLanguagesContainsAndDeletedFalse(
                     BotState.ONLINE,
-                    Language(senderUser.languages[0].name)
+                    languageRepository.findByName(senderUser.languages[0].name)
                 ).let {
                     if (it.isNotEmpty()) {
                         val toDTO = toDTO(
@@ -161,7 +162,7 @@ interface AttachmentService {
 
 @Service
 class AttachmentServiceImpl(
-    private val attachmentRepo: AttachmentRepository
+    private val attachmentRepo: AttachmentRepository,
 ) : AttachmentService {
 
 }
