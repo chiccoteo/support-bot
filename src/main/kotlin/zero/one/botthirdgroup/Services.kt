@@ -99,11 +99,11 @@ class MessageServiceImpl(
                                     attachment,
                                     text
                                 )
-                            ), session.operator?.chatId, attachment
+                            ), session.user.chatId, attachment
                         )
                         result = toDTO
                     }
-                }
+                }?:
                 sessionRepo.findByStatusTrueAndUser(senderUser)?.let { session ->
                     session.operator?.let {
                         val toDTO = toDTO(
