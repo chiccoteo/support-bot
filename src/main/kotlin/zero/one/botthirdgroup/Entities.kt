@@ -41,9 +41,8 @@ class Session(
 
 @Entity
 class Attachment(
-    var originalName: String,
-    var contentType: String,
-    var size: Long,
+    var fileUrl: String,
+    @Enumerated(EnumType.STRING) var contentType: AttachmentContentType,
 ) : BaseEntity()
 
 @Entity
