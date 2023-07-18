@@ -19,25 +19,21 @@ interface UserService {
 
 }
 
-interface MessageService {
-
-    fun create(messageDTO: MessageDTO): MessageDTO?
-
-    fun getWaitedMessages(chatId: String): List<MessageDTO>
-
-}
-
-interface AttachmentService {
-    fun create(fileId: String, fileName: String)
 }
 
 @Service
 class UserServiceImpl(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val languageRepository: LanguageRepository
 ) : UserService {
     override fun createOrTgUser(chatId: String): User {
         return userRepository.findByChatIdAndDeletedFalse(chatId)
-            ?: userRepository.save(User(chatId))
+            ?: userRepository.save(
+                User(
+                    chatId,
+                    mutableListOf(languageRepository.findByName(LanguageName.UZ))
+                )
+            )
     }
 
     override fun update(user: User) {
@@ -49,6 +45,7 @@ class UserServiceImpl(
         }
         userRepository.save(user)
     }
+}
 
     override fun getAll(pageable: Pageable) =
         userRepository.findAllByDeletedFalse(pageable).map { GetUserDTO.toDTO(it) }
@@ -152,11 +149,16 @@ class MessageServiceImpl(
 
 }
 
+interface AttachmentService {
+    fun create(fileId: String, fileName: String, contentType: AttachmentContentType)
+}
+
 @Service
 class AttachmentServiceImpl(
-    private val botService: TelegramBotService
+    private val botService: TelegramBotService,
+    private val attachmentRepo: AttachmentRepository
 ) : AttachmentService {
-    override fun create(fileId: String, fileName: String) {
+    override fun create(fileId: String, fileName: String, contentType: AttachmentContentType) {
         val strings = fileName.split(".")
         val fromTelegram = botService.getFromTelegram(fileId, botService.botToken)
         val path = Paths.get(
@@ -164,6 +166,6 @@ class AttachmentServiceImpl(
                     UUID.randomUUID().toString() + "." + strings[strings.size - 1]
         )
         Files.copy(ByteArrayInputStream(fromTelegram), path)
-        // Save db attachment
+        attachmentRepo.save(Attachment(path.toString(), contentType))
     }
 }
