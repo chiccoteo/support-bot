@@ -18,7 +18,9 @@ enum class BotState {
     SHARE_CONTACT,
     ONLINE,
     ASK_QUESTION,
-    USER_MENU
+    USER_MENU,
+    SESSION,
+    OPERATOR_MENU
 }
 
 enum class AttachmentContentType{

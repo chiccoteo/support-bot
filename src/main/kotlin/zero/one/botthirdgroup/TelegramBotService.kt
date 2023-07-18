@@ -8,13 +8,16 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.GetFile
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
+import org.telegram.telegrambots.meta.api.objects.InputFile
 import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.sql.Timestamp
@@ -28,7 +31,7 @@ class TelegramBotService(
     private val languageUtil: LanguageUtil,
     private val languageRepository: LanguageRepository,
     private val messageService: MessageService,
-    private val attachmentRepo: AttachmentRepository
+    private val attachmentRepo: AttachmentRepository,
 ) : TelegramLongPollingBot() {
 
     @Value("\${telegram.bot.username}")
@@ -122,7 +125,7 @@ class TelegramBotService(
                     }
 
 
-                    user.botState == BotState.ASK_QUESTION -> {
+                    (user.botState == BotState.ASK_QUESTION || user.botState == BotState.ONLINE) -> {
                         val create = messageService.create(
                             MessageDTO(
                                 message.messageId,
@@ -132,8 +135,64 @@ class TelegramBotService(
                             )
                         )
 
-                        sendText(userService.createOrTgUser(create?.toChatId.toString()), create?.text.toString())
+                        if (create != null)
+                            sendText(userService.createOrTgUser(create.toChatId.toString()), create?.text.toString())
 
+
+                        val operatorUser = userService.createOrTgUser(create?.toChatId.toString())
+                        operatorUser.botState = BotState.SESSION
+                        userService.update(operatorUser)
+                    }
+
+
+                    (user.role == Role.OPERATOR && user.botState == BotState.OPERATOR_MENU) -> {
+                        when (text) {
+                            "ONLINE" -> {
+                                user.botState = BotState.ONLINE
+                                val waitedMessages = messageService.getWaitedMessages(user.chatId)
+
+                                for (waitedMessage in waitedMessages) {
+                                    if (waitedMessage.attachment == null) {
+                                        waitedMessage.run {
+                                            this.text?.let {
+                                                sendText(
+                                                    userService.createOrTgUser(it), this.text.toString()
+                                                )
+                                            }
+                                        }
+                                    } else {
+
+                                        waitedMessage.attachment.let {
+                                            when (it.contentType) {
+
+                                                AttachmentContentType.PHOTO -> {
+                                                    execute(SendPhoto(user.chatId, InputFile(File(it.fileUrl))))
+                                                }
+
+                                                AttachmentContentType.DOCUMENT -> {
+
+                                                }
+
+                                                AttachmentContentType.VIDEO -> {
+
+                                                }
+
+                                                else -> {}
+                                            }
+                                        }
+
+
+                                    }
+
+                                }
+
+
+                            }
+
+                            "OFFLINE" -> {
+
+                            }
+                        }
                     }
 
 //                    else -> sendText(user, languageUtil.chooseMenuTextReq(userLang))
@@ -147,6 +206,32 @@ class TelegramBotService(
                 userMenu(user, userLang)
             }
         }
+    }
+
+
+    private fun onlineOfflineMenu(user: User, userLang: LanguageName) {
+        val sendMessage = SendMessage()
+        val rows: MutableList<KeyboardRow> = mutableListOf()
+
+        val row1 = KeyboardRow()
+
+        val onButton = KeyboardButton("ONLINE")
+        val offButton = KeyboardButton("OFFLINE")
+
+
+        row1.add(onButton)
+        row1.add(offButton)
+        rows.add(row1)
+
+        sendMessage.text = languageUtil.chooseMenuTextReq(userLang)
+        sendMessage.chatId = user.chatId
+
+
+        val markup = ReplyKeyboardMarkup()
+        markup.resizeKeyboard = true
+        markup.keyboard = rows
+        sendMessage.replyMarkup = markup
+        execute(sendMessage)
     }
 
     private fun sendContactRequest(user: User, contactButtonTxt: String) {
