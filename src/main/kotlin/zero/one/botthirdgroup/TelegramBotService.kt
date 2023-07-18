@@ -14,8 +14,12 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
+import java.io.ByteArrayInputStream
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.sql.Timestamp
 import java.time.LocalDateTime
+import java.util.*
 
 
 @Service
@@ -24,6 +28,7 @@ class TelegramBotService(
     private val languageUtil: LanguageUtil,
     private val languageRepository: LanguageRepository,
     private val messageService: MessageService,
+    private val attachmentRepo: AttachmentRepository
 ) : TelegramLongPollingBot() {
 
     @Value("\${telegram.bot.username}")
@@ -262,6 +267,17 @@ class TelegramBotService(
         markup.keyboard = rows
         sendMessage.replyMarkup = markup
         execute(sendMessage)
+    }
+
+    fun create(fileId: String, fileName: String, contentType: AttachmentContentType) {
+        val strings = fileName.split(".")
+        val fromTelegram = getFromTelegram(fileId, botToken)
+        val path = Paths.get(
+            "files/" +
+                    UUID.randomUUID().toString() + "." + strings[strings.size - 1]
+        )
+        Files.copy(ByteArrayInputStream(fromTelegram), path)
+        attachmentRepo.save(Attachment(path.toString(), contentType))
     }
 
 
