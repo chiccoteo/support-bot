@@ -5,7 +5,6 @@ import zero.one.botthirdgroup.MessageDTO.Companion.toDTO
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.sql.Timestamp
 import java.util.*
 
 interface UserService {
@@ -113,8 +112,7 @@ class MessageServiceImpl(
                 session.operator = operator
                 sessionRepo.save(session)
                 messageRepo.findAllBySessionAndDeletedFalseOrderByTime(
-                    session,
-                    Timestamp(System.currentTimeMillis())
+                    session
                 ).forEach {
 //                    toDTO(it, chatId, attachmentService.create(it))
                 }
