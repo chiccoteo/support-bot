@@ -303,6 +303,40 @@ class TelegramBotService(
     }
 
 
+    private fun rateOperator(user: User, userLang: LanguageName) {
+        val sendMessage = SendMessage()
+        val rows: MutableList<KeyboardRow> = mutableListOf()
+
+        val row1 = KeyboardRow()
+        val row2 = KeyboardRow()
+
+        val one = KeyboardButton("1")
+        val two = KeyboardButton("2")
+        val three = KeyboardButton("3")
+        val four = KeyboardButton("4")
+        val five = KeyboardButton("5")
+
+
+        row1.add(one)
+        row1.add(two)
+        row1.add(three)
+        row2.add(four)
+        row2.add(five)
+        rows.add(row1)
+        rows.add(row2)
+
+        sendMessage.text = "Operatorni baholang 😀"
+        sendMessage.chatId = user.chatId
+
+
+        val markup = ReplyKeyboardMarkup()
+        markup.resizeKeyboard = true
+        markup.keyboard = rows
+        sendMessage.replyMarkup = markup
+        execute(sendMessage)
+    }
+
+
     private fun yesNoAsk(user: User, userLang: LanguageName) {
         val sendMessage = SendMessage()
         val rows: MutableList<KeyboardRow> = mutableListOf()
