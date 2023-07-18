@@ -4,10 +4,6 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import zero.one.botthirdgroup.MessageDTO.Companion.toDTO
-import java.io.ByteArrayInputStream
-import java.nio.file.Files
-import java.nio.file.Paths
-import java.util.*
 
 interface UserService {
     fun createOrTgUser(chatId: String): User
@@ -24,6 +20,10 @@ interface MessageService {
     fun create(messageDTO: MessageDTO): MessageDTO?
 
     fun getWaitedMessages(chatId: String): List<MessageDTO>?
+
+    fun getUserFromSession(operatorChatId: String): String
+
+    fun getOperatorFromSession(userChatId: String): String
 
     fun ratingAndClosingSession(userChatId: String, rate: Double)
 
@@ -103,8 +103,7 @@ class MessageServiceImpl(
                         )
                         result = toDTO
                     }
-                }?:
-                sessionRepo.findByStatusTrueAndUser(senderUser)?.let { session ->
+                } ?: sessionRepo.findByStatusTrueAndUser(senderUser)?.let { session ->
                     session.operator?.let {
                         val toDTO = toDTO(
                             messageRepo.save(
@@ -180,6 +179,28 @@ class MessageServiceImpl(
             }
         }
         return messageDTOs
+    }
+
+    override fun getUserFromSession(operatorChatId: String): String {
+        var userChatId = ""
+        userRepo.findByChatIdAndDeletedFalse(operatorChatId)?.let {
+            sessionRepo.findByStatusTrueAndOperator(it)?.run {
+                userChatId = this.user.chatId
+            }
+        }
+        return userChatId
+    }
+
+    override fun getOperatorFromSession(userChatId: String): String {
+        var operatorChatId = ""
+        userRepo.findByChatIdAndDeletedFalse(userChatId)?.let {
+            sessionRepo.findByStatusTrueAndUser(it)?.run {
+                this.operator?.let { operator ->
+                    operatorChatId = operator.chatId
+                }
+            }
+        }
+        return operatorChatId
     }
 
     override fun ratingAndClosingSession(userChatId: String, rate: Double) {
