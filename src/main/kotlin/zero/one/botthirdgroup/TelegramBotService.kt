@@ -125,7 +125,7 @@ class TelegramBotService(
                     }
 
 
-                    (user.botState == BotState.ASK_QUESTION || user.botState == BotState.ONLINE) -> {
+                    (user.botState == BotState.ASK_QUESTION) -> {
                         val create = messageService.create(
                             MessageDTO(
                                 message.messageId,
@@ -135,30 +135,30 @@ class TelegramBotService(
                             )
                         )
 
-                        if (create != null)
-                            sendText(userService.createOrTgUser(create.toChatId.toString()), create?.text.toString())
-
-
-                        val operatorUser = userService.createOrTgUser(create?.toChatId.toString())
-                        operatorUser.botState = BotState.SESSION
-                        userService.update(operatorUser)
+                        if (create != null) {
+                            val tgUser = userService.createOrTgUser(create.toChatId.toString())
+                            sendText(tgUser, create.text.toString())
+                            tgUser.botState = BotState.SESSION
+                            userService.update(tgUser)
+                        }
                     }
-
 
                     (user.role == Role.OPERATOR && user.botState == BotState.OPERATOR_MENU) -> {
                         when (text) {
                             "ONLINE" -> {
                                 user.botState = BotState.ONLINE
+                                userService.update(user)
                                 val waitedMessages = messageService.getWaitedMessages(user.chatId)
 
                                 waitedMessages?.let {
-
+                                    user.botState = BotState.SESSION
+                                    userService.update(user)
                                     for (waitedMessage in it) {
                                         if (waitedMessage.attachment == null) {
                                             waitedMessage.run {
-                                                this.text?.let {
+                                                this.text?.let { text ->
                                                     sendText(
-                                                        userService.createOrTgUser(it), this.text.toString()
+                                                        userService.createOrTgUser(this.toChatId.toString()), text
                                                     )
                                                 }
                                             }
@@ -236,11 +236,15 @@ class TelegramBotService(
                 )
 
                 messageDTO.let {
-                    execute(SendPhoto(it?.toChatId.toString(), InputFile(it?.attachment?.pathName?.let { it1 -> File(it1) })))
+                    execute(
+                        SendPhoto(
+                            it?.toChatId.toString(),
+                            InputFile(it?.attachment?.pathName?.let { it1 -> File(it1) })
+                        )
+                    )
                 }
 
             } else if (message.hasDocument()) {
-
 
 
             } else if (message.hasSticker()) {
