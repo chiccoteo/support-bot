@@ -1,5 +1,7 @@
 package zero.one.botthirdgroup
 
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import zero.one.botthirdgroup.MessageDTO.Companion.toDTO
 import java.io.ByteArrayInputStream
@@ -10,7 +12,23 @@ import java.util.*
 interface UserService {
     fun createOrTgUser(chatId: String): User
     fun update(user: User)
+    fun getAll(pageable: Pageable): Page<GetUserDTO>
+    fun getUserByRole(role: Role, pageable: Pageable): Page<GetUserDTO>
+    fun updateRole(phone: String)
+    fun updateLang(phone: String, languages: List<Language>)
 
+}
+
+interface MessageService {
+
+    fun create(messageDTO: MessageDTO): MessageDTO?
+
+    fun getWaitedMessages(chatId: String): List<MessageDTO>
+
+}
+
+interface AttachmentService {
+    fun create(fileId: String, fileName: String)
 }
 
 @Service
@@ -31,14 +49,25 @@ class UserServiceImpl(
         }
         userRepository.save(user)
     }
-}
 
-interface MessageService {
+    override fun getAll(pageable: Pageable) =
+        userRepository.findAllByDeletedFalse(pageable).map { GetUserDTO.toDTO(it) }
 
-    fun create(messageDTO: MessageDTO): MessageDTO?
+    override fun getUserByRole(role: Role, pageable: Pageable): Page<GetUserDTO> {
+        return userRepository.findByRoleAndDeletedFalse(role, pageable).map { GetUserDTO.toDTO(it) }
+    }
 
-    fun getWaitedMessages(chatId: String): List<MessageDTO>
+    override fun updateRole(phone: String) {
+        val user = userRepository.findByPhoneNumberAndDeletedFalse(phone)
+        user.role = Role.OPERATOR
+        userRepository.save(user)
+    }
 
+    override fun updateLang(phone: String, languages: List<Language>) {
+        val user = userRepository.findByPhoneNumberAndDeletedFalse(phone)
+        user.languages = languages.toMutableList()
+        userRepository.save(user)
+    }
 }
 
 @Service
@@ -121,10 +150,6 @@ class MessageServiceImpl(
         TODO("Not yet implemented")
     }
 
-}
-
-interface AttachmentService {
-    fun create(fileId: String, fileName: String)
 }
 
 @Service

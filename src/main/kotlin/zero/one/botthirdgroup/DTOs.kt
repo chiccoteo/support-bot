@@ -19,3 +19,18 @@ data class MessageDTO(
         }
     }
 }
+
+data class GetUserDTO(
+    val id: Long,
+    val name: String,
+    val phone: String,
+    val role: Role,
+    val languages: MutableList<Language>,
+    val botState: BotState
+) {
+    companion object {
+        fun toDTO(user: User): GetUserDTO {
+            return user.run { GetUserDTO(id!!, name!!, phoneNumber!!, role!!, languages, botState) }
+        }
+    }
+}
