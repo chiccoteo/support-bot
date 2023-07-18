@@ -209,6 +209,29 @@ class TelegramBotService(
                         }
                     }
 
+
+                    (user.botState == BotState.SESSION) -> {
+
+                        val create = messageService.create(
+                            MessageDTO(
+                                message.messageId,
+                                null,
+                                Timestamp(System.currentTimeMillis()),
+                                user.chatId,
+                                null,
+                                text,
+                                null
+                            )
+                        )
+
+                        create?.let {
+                            val tgUser = userService.createOrTgUser(it.toChatId.toString())
+                            sendText(tgUser, it.text.toString())
+                        }
+
+                    }
+
+
 //                    else -> sendText(user, languageUtil.chooseMenuTextReq(userLang))
                 }
             } else if (message.hasContact()) {
