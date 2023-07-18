@@ -16,11 +16,15 @@ class User(
     var phoneNumber: String?,
     var chatId: String,
     @Enumerated(EnumType.STRING) var role: Role?,
-    @ManyToMany(fetch = FetchType.EAGER) var languages: MutableList<Language?>,
+    @ManyToMany(fetch = FetchType.EAGER) var languages: MutableList<Language>,
     @Enumerated(EnumType.STRING) var botState: BotState = BotState.START
 
 ) : BaseEntity() {
-    constructor(chatId: String) : this(null, null, chatId, null, mutableListOf())
+    constructor(chatId: String) : this(
+        null, null, chatId, null, mutableListOf(
+            Language(LanguageName.UZ)
+        )
+    )
 }
 
 @Entity
@@ -31,8 +35,9 @@ class Language(
 @Entity
 class Session(
     @ColumnDefault(value = "true") var status: Boolean,
+    @ManyToOne var sessionLanguage: Language,
     @ManyToOne var user: User,
-    @ManyToOne var operator: User
+    @ManyToOne var operator: User?
 ) : BaseEntity()
 
 @Entity
