@@ -112,7 +112,7 @@ class MessageServiceImpl(
                                     telegramMessageId,
                                     replyTelegramMessageId,
                                     time,
-                                    Session(true, senderUser.languages[0], senderUser, it[0]),
+                                    sessionRepo.save(Session(true, senderUser.languages[0], senderUser, it[0])),
                                     senderUser,
                                     text
                                 )
@@ -125,7 +125,7 @@ class MessageServiceImpl(
                                 telegramMessageId,
                                 replyTelegramMessageId,
                                 time,
-                                Session(true, senderUser.languages[0], senderUser, null),
+                                sessionRepo.save(Session(true, senderUser.languages[0], senderUser, null)),
                                 senderUser,
                                 text
                             )
