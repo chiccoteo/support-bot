@@ -63,6 +63,13 @@ class LanguageUtil {
             LanguageName.ENG -> "What question do you have?"
         }
     }
+    fun closeSessionBtnTxt(lang: LanguageName): String {
+        return when (lang) {
+            LanguageName.UZ -> "Sessiyani yopish"
+            LanguageName.RU -> "Закрыть сеанс"
+            LanguageName.ENG -> "Close the session"
+        }
+    }
 }
 
 

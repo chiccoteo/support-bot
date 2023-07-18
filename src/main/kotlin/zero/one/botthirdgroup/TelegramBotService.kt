@@ -70,8 +70,11 @@ class TelegramBotService(
 
                         when (user.role) {
 
-                            Role.OPERATOR -> {
-                                onlineOfflineMenu(user, userLang)
+                            (Role.OPERATOR) -> {
+
+//                                user.botState = BotState.OPERATOR_MENU
+//                                userService.update(user)
+//                                onlineOfflineMenu(user, userLang)
                             }
 
                             Role.USER -> {
@@ -245,6 +248,9 @@ class TelegramBotService(
                             sendText(tgUser, it.text.toString())
                         }
 
+                        yesNoAsk(user, userLang)
+
+
                     }
 
 
@@ -296,6 +302,53 @@ class TelegramBotService(
         }
     }
 
+
+    private fun yesNoAsk(user: User, userLang: LanguageName) {
+        val sendMessage = SendMessage()
+        val rows: MutableList<KeyboardRow> = mutableListOf()
+
+        val row1 = KeyboardRow()
+
+        val yes = KeyboardButton("Ha")
+        val no = KeyboardButton("Yoq")
+
+        row1.add(yes)
+        row1.add(no)
+        rows.add(row1)
+
+        sendMessage.text = "Savolingiz bormi?"
+        sendMessage.chatId = user.chatId
+
+
+        val markup = ReplyKeyboardMarkup()
+        markup.resizeKeyboard = true
+        markup.keyboard = rows
+        sendMessage.replyMarkup = markup
+        execute(sendMessage)
+    }
+
+
+    private fun closeSession(user: User, userLang: LanguageName) {
+        val sendMessage = SendMessage()
+        val rows: MutableList<KeyboardRow> = mutableListOf()
+
+        val row1 = KeyboardRow()
+
+        val button = KeyboardButton(languageUtil.closeSessionBtnTxt(userLang))
+
+        row1.add(button)
+        rows.add(row1)
+
+        sendMessage.text = "Sessiyani yopmoqchimisiz?"
+        sendMessage.chatId = user.chatId
+
+
+        val markup = ReplyKeyboardMarkup()
+        markup.resizeKeyboard = true
+        markup.keyboard = rows
+        sendMessage.replyMarkup = markup
+        execute(sendMessage)
+    }
 
     private fun onlineOfflineMenu(user: User, userLang: LanguageName) {
         val sendMessage = SendMessage()
