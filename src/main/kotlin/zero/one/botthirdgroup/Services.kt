@@ -16,7 +16,7 @@ interface UserService {
 @Service
 class UserServiceImpl(
     private val userRepository: UserRepository,
-    private val languageRepository: LanguageRepository,
+    private val languageRepository: LanguageRepository
 ) : UserService {
     override fun createOrTgUser(chatId: String): User {
         return userRepository.findByChatIdAndDeletedFalse(chatId)
@@ -52,6 +52,7 @@ class MessageServiceImpl(
     private val userRepo: UserRepository,
     private val sessionRepo: SessionRepository,
     private val messageRepo: MessageRepository,
+    private val attachmentService: AttachmentService,
 ) : MessageService {
     override fun create(messageDTO: MessageDTO): MessageDTO? {
         messageDTO.run {
@@ -118,7 +119,7 @@ class MessageServiceImpl(
                 sessionRepo.save(session)
                 messageRepo.findAllBySessionAndDeletedFalseOrderByTime(
                     session
-                ).forEach { _ ->
+                ).forEach {
 //                    toDTO(it, chatId, attachmentService.create(it))
                 }
             }
@@ -129,14 +130,15 @@ class MessageServiceImpl(
 }
 
 interface AttachmentService {
-    fun create(fileId: String, fileName: String)
+    fun create(fileId: String, fileName: String, contentType: AttachmentContentType)
 }
 
 @Service
 class AttachmentServiceImpl(
     private val botService: TelegramBotService,
+    private val attachmentRepo: AttachmentRepository
 ) : AttachmentService {
-    override fun create(fileId: String, fileName: String) {
+    override fun create(fileId: String, fileName: String, contentType: AttachmentContentType) {
         val strings = fileName.split(".")
         val fromTelegram = botService.getFromTelegram(fileId, botService.botToken)
         val path = Paths.get(
@@ -144,8 +146,6 @@ class AttachmentServiceImpl(
                     UUID.randomUUID().toString() + "." + strings[strings.size - 1]
         )
         Files.copy(ByteArrayInputStream(fromTelegram), path)
-        // Save db attachment
+        attachmentRepo.save(Attachment(path.toString(), contentType))
     }
 }
-
-
