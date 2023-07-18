@@ -2,19 +2,20 @@ package zero.one.botthirdgroup
 
 import java.sql.Timestamp
 
-data class MessageCreateDTO(
+data class MessageDTO(
     val telegramMessageId: Long,
     val replyTelegramMessageId: Long,
     val time: Timestamp,
-    val senderChatId: Long,
+    val senderChatId: String,
+    val toChatId: String?,
     val text: String?,
-)
-
-data class GetMessageDTO(
-    val telegramMessageId: Long,
-    val time: Timestamp,
-    val sessionId: Long,
-    val senderChatId: Long,
-    val text: String?,
-    val attachmentsId: List<Long>?
-)
+    val attachment: Attachment?
+) {
+    companion object {
+        fun toDTO(message: Message, toChatId: String?, attachment: Attachment?): MessageDTO {
+            return message.run {
+                MessageDTO(telegramMessageId, replyTelegramMessageId, time, sender.chatId, toChatId, text, attachment)
+            }
+        }
+    }
+}

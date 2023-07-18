@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.support.SimpleJpaRepository
 import org.springframework.data.repository.NoRepositoryBean
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.transaction.annotation.Transactional
+import java.sql.Timestamp
 import javax.persistence.EntityManager
 
 @NoRepositoryBean
@@ -42,14 +43,20 @@ class BaseRepositoryImpl<T : BaseEntity>(
 
 interface UserRepository : BaseRepository<User> {
     fun findByChatIdAndDeletedFalse(chatId: String): User?
+    fun findAllByBotStateAndLanguagesContainsAndDeletedFalse(botState: BotState, language: Language): List<User?>
 }
 
 interface LanguageRepository : BaseRepository<Language> {
     fun findByName(name: LanguageName): Language
 }
 
-interface SessionRepository : BaseRepository<Session>
+interface SessionRepository : BaseRepository<Session> {
+    fun findByStatusTrueAndUser(user: User): Session?
+    fun findAllByStatusTrueAndSessionLanguageInAndOperatorIsNull(operatorLanguages: MutableList<Language>?): List<Session?>
+}
 
-interface MessageRepository : BaseRepository<Message>
+interface MessageRepository : BaseRepository<Message> {
+    fun findAllBySessionAndDeletedFalseOrderByTime(session: Session, time: Timestamp): List<Message>
+}
 
 interface AttachmentRepository : BaseRepository<Attachment>

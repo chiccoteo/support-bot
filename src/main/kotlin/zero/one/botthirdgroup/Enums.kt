@@ -15,5 +15,6 @@ enum class LanguageName {
 enum class BotState {
     START,
     CHOOSE_LANG,
-    SHARE_CONTACT
+    SHARE_CONTACT,
+    ONLINE
 }
