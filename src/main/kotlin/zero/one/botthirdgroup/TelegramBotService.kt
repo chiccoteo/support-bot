@@ -151,46 +151,60 @@ class TelegramBotService(
                                 user.botState = BotState.ONLINE
                                 val waitedMessages = messageService.getWaitedMessages(user.chatId)
 
-                                for (waitedMessage in waitedMessages) {
-                                    if (waitedMessage.attachment == null) {
-                                        waitedMessage.run {
-                                            this.text?.let {
-                                                sendText(
-                                                    userService.createOrTgUser(it), this.text.toString()
-                                                )
+                                waitedMessages?.let {
+
+                                    for (waitedMessage in it) {
+                                        if (waitedMessage.attachment == null) {
+                                            waitedMessage.run {
+                                                this.text?.let {
+                                                    sendText(
+                                                        userService.createOrTgUser(it), this.text.toString()
+                                                    )
+                                                }
                                             }
-                                        }
-                                    } else {
+                                        } else {
 
-                                        waitedMessage.attachment.let {
-                                            when (it.contentType) {
+                                            waitedMessage.attachment.let { attachment ->
+                                                when (attachment.contentType) {
 
-                                                AttachmentContentType.PHOTO -> {
-                                                    execute(SendPhoto(user.chatId, InputFile(File(it.fileUrl))))
+                                                    AttachmentContentType.PHOTO -> {
+                                                        execute(
+                                                            SendPhoto(
+                                                                waitedMessage.toChatId.toString(),
+                                                                InputFile(File(attachment.pathName))
+                                                            )
+                                                        )
+                                                    }
+
+                                                    AttachmentContentType.DOCUMENT -> {
+                                                        execute(
+                                                            SendDocument(
+                                                                waitedMessage.toChatId.toString(),
+                                                                InputFile(File(attachment.pathName))
+                                                            )
+                                                        )
+                                                    }
+
+                                                    AttachmentContentType.VIDEO -> {
+
+                                                    }
+
+                                                    else -> {}
                                                 }
-
-                                                AttachmentContentType.DOCUMENT -> {
-
-                                                }
-
-                                                AttachmentContentType.VIDEO -> {
-
-                                                }
-
-                                                else -> {}
                                             }
-                                        }
 
+
+                                        }
 
                                     }
-
                                 }
 
 
                             }
 
                             "OFFLINE" -> {
-
+                                user.botState = BotState.OFFLINE
+                                userService.update(user)
                             }
                         }
                     }
@@ -204,6 +218,37 @@ class TelegramBotService(
                 user.botState = BotState.USER_MENU
                 userService.update(user)
                 userMenu(user, userLang)
+            } else if (message.hasPhoto()) {
+
+                val photo = message.photo.last()
+                val create = create(photo.fileId, photo.filePath, AttachmentContentType.PHOTO)
+
+                val messageDTO = messageService.create(
+                    MessageDTO(
+                        message.messageId,
+                        null,
+                        Timestamp(System.currentTimeMillis()),
+                        user.chatId,
+                        null,
+                        null,
+                        create
+                    )
+                )
+
+                messageDTO.let {
+                    execute(SendPhoto(it?.toChatId.toString(), InputFile(it?.attachment?.pathName?.let { it1 -> File(it1) })))
+                }
+
+            } else if (message.hasDocument()) {
+
+
+
+            } else if (message.hasSticker()) {
+
+            } else if (message.hasVoice()) {
+
+            } else if (message.hasVideoNote()) {
+
             }
         }
     }
@@ -354,7 +399,7 @@ class TelegramBotService(
         execute(sendMessage)
     }
 
-    fun create(fileId: String, fileName: String, contentType: AttachmentContentType):Attachment {
+    fun create(fileId: String, fileName: String, contentType: AttachmentContentType): Attachment {
         val strings = fileName.split(".")
         val fromTelegram = getFromTelegram(fileId, botToken)
         val path = Paths.get(

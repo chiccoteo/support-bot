@@ -20,7 +20,8 @@ enum class BotState {
     ASK_QUESTION,
     USER_MENU,
     SESSION,
-    OPERATOR_MENU
+    OPERATOR_MENU,
+    OFFLINE
 }
 
 enum class AttachmentContentType{
