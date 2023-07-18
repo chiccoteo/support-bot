@@ -47,3 +47,9 @@ interface UserRepository : BaseRepository<User> {
 interface LanguageRepository : BaseRepository<Language> {
     fun findByName(name: LanguageName): Language
 }
+
+interface SessionRepository : BaseRepository<Session>
+
+interface MessageRepository : BaseRepository<Message>
+
+interface AttachmentRepository : BaseRepository<Attachment>

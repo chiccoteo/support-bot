@@ -2,12 +2,16 @@ package zero.one.botthirdgroup
 
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import org.springframework.web.client.RestTemplate
+import org.springframework.web.client.getForObject
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
+import org.telegram.telegrambots.meta.api.methods.GetFile
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
+import java.util.*
 
 
 @Service
@@ -29,6 +33,10 @@ class TelegramBotService(
 
     override fun getBotToken(): String = token
 
+    fun getFromTelegram(fileId: String, token: String) = execute(GetFile(fileId)).run {
+        RestTemplate().getForObject<ByteArray>("https://api.telegram.org/file/bot${token}/${filePath}")
+    }
+
     override fun onUpdateReceived(update: Update?) {
         if (update!!.hasMessage()) {
             val message = update.message
@@ -44,7 +52,7 @@ class TelegramBotService(
                 when {
                     text.equals("/start") -> {
                         if (userLang == null) {
-                            chooseLanguage(user, "${message.from.firstName}")
+                            chooseLanguage(user, message.from.firstName)
                         } else if (user.phoneNumber == null) {
                             sendContactRequest(user, languageUtil.contactButtonTxt(userLang))
                         }
@@ -77,8 +85,6 @@ class TelegramBotService(
                                     languageUtil.contactButtonTxt(LanguageName.ENG)
                                 )
                             }
-
-                            else -> "Pashol"
                         }
                         user.botState = BotState.SHARE_CONTACT
                         userService.update(user)
@@ -92,13 +98,9 @@ class TelegramBotService(
                 user.phoneNumber = contact.phoneNumber
                 user.name = contact.firstName + " " + contact?.lastName
                 userService.update(user)
-
             }
-
-
         }
     }
-
 
     private fun sendContactRequest(user: User, contactButtonTxt: String) {
         val sendMessage = SendMessage()

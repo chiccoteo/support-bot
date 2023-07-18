@@ -1,7 +1,10 @@
 package zero.one.botthirdgroup
 
 import org.springframework.stereotype.Service
-import org.springframework.web.multipart.MultipartFile
+import java.io.ByteArrayInputStream
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.util.*
 
 interface UserService {
     fun createOrTgUser(chatId: String): User
@@ -43,7 +46,6 @@ class MessageServiceImpl(
     private val sessionRepo: SessionRepository,
     private val messageRepo: MessageRepository,
     private val attachmentRepo: AttachmentRepository,
-    private val attachmentContentRepo: AttachmentContentRepository
 ) : MessageService {
     override fun create(messageCreateDTO: MessageCreateDTO): String {
         /*messageCreateDTO.run {
@@ -77,25 +79,27 @@ class MessageServiceImpl(
 
     }
 
-    fun saveAttachment(file: MultipartFile): Attachment {
-        val attachment = attachmentRepo.save(
-            Attachment(
-                file.originalFilename ?: "",
-                file.contentType ?: "",
-                file.size
-            )
-        )
-        attachmentContentRepo.save(
-            AttachmentContent(
-                file.bytes,
-                attachment
-            )
-        )
-        return attachment
-    }
-
 
     override fun get(): GetMessageDTO {
         TODO("Not yet implemented")
+    }
+}
+
+interface AttachmentService {
+    fun create(fileId: String, fileName: String)
+}
+
+class AttachmentServiceImpl(
+    private val botService: TelegramBotService
+) : AttachmentService {
+    override fun create(fileId: String, fileName: String) {
+        val strings = fileName.split(".")
+        val fromTelegram = botService.getFromTelegram(fileId, botService.botToken)
+        val path = Paths.get(
+            "files/" +
+                    UUID.randomUUID().toString() + "." + strings[strings.size - 1]
+        )
+        Files.copy(ByteArrayInputStream(fromTelegram), path)
+        // Save db attachment
     }
 }
