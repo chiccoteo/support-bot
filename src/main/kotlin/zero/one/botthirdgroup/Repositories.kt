@@ -10,7 +10,6 @@ import org.springframework.data.jpa.repository.support.SimpleJpaRepository
 import org.springframework.data.repository.NoRepositoryBean
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.transaction.annotation.Transactional
-import java.sql.Timestamp
 import javax.persistence.EntityManager
 
 @NoRepositoryBean
@@ -56,7 +55,7 @@ interface SessionRepository : BaseRepository<Session> {
 }
 
 interface MessageRepository : BaseRepository<Message> {
-    fun findAllBySessionAndDeletedFalseOrderByTime(session: Session, time: Timestamp): List<Message>
+    fun findAllBySessionAndDeletedFalseOrderByTime(session: Session): List<Message>
 }
 
 interface AttachmentRepository : BaseRepository<Attachment>
