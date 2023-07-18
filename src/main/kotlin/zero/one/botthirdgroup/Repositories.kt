@@ -41,6 +41,9 @@ class BaseRepositoryImpl<T : BaseEntity>(
 }
 
 interface UserRepository : BaseRepository<User> {
+    fun findByPhoneNumberAndDeletedFalse(phoneNumber: String): User
+    fun findByRoleAndDeletedFalse(role: Role, pageable: Pageable): Page<User>
+    fun findAllByDeletedFalse(pageable: Pageable): Page<User>
     fun findByChatIdAndDeletedFalse(chatId: String): User?
     fun findAllByBotStateAndLanguagesContainsAndDeletedFalse(botState: BotState, language: Language): List<User?>
 }
