@@ -29,15 +29,10 @@ class Language(
 ) : BaseEntity()
 
 @Entity
-class Chat(
+class Session(
+    @ColumnDefault(value = "true") var status: Boolean,
     @ManyToOne var user: User,
     @ManyToOne var operator: User
-) : BaseEntity()
-
-@Entity
-class Session(
-    @ColumnDefault(value = "false") var status: Boolean,
-    @ManyToOne var chat: Chat
 ) : BaseEntity()
 
 @Entity
@@ -45,20 +40,14 @@ class Attachment(
     var originalName: String,
     var contentType: String,
     var size: Long,
-    @ManyToOne var message: Message
-) : BaseEntity()
-
-@Entity
-class AttachmentContent(
-    var byte: Byte,
-    @OneToOne var attachment: Attachment
 ) : BaseEntity()
 
 @Entity
 class Message(
     var telegramMessageId: Long,
+    var replyTelegramMessageId: Long,
     var time: Timestamp,
     @ManyToOne var session: Session,
-    @ManyToOne var user: User,
+    @ManyToOne var sender: User,
     var text: String?
 ) : BaseEntity()
