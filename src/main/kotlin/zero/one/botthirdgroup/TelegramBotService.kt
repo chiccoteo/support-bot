@@ -354,7 +354,7 @@ class TelegramBotService(
         execute(sendMessage)
     }
 
-    fun create(fileId: String, fileName: String, contentType: AttachmentContentType) {
+    fun create(fileId: String, fileName: String, contentType: AttachmentContentType):Attachment {
         val strings = fileName.split(".")
         val fromTelegram = getFromTelegram(fileId, botToken)
         val path = Paths.get(
@@ -362,7 +362,7 @@ class TelegramBotService(
                     UUID.randomUUID().toString() + "." + strings[strings.size - 1]
         )
         Files.copy(ByteArrayInputStream(fromTelegram), path)
-        attachmentRepo.save(Attachment(path.toString(), contentType))
+        return attachmentRepo.save(Attachment(path.toString(), contentType))
     }
 
 

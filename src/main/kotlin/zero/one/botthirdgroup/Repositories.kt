@@ -53,8 +53,9 @@ interface LanguageRepository : BaseRepository<Language> {
 }
 
 interface SessionRepository : BaseRepository<Session> {
+    fun findByStatusTrueAndOperator(operator: User): Session?
     fun findByStatusTrueAndUser(user: User): Session?
-    fun findAllByStatusTrueAndSessionLanguageInAndOperatorIsNull(operatorLanguages: MutableList<Language>?): List<Session?>
+    fun findAllByStatusTrueAndSessionLanguageInAndOperatorIsNullOrderByTime(operatorLanguages: MutableList<Language>?): List<Session?>
 }
 
 interface MessageRepository : BaseRepository<Message> {

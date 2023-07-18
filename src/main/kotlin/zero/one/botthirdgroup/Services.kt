@@ -23,7 +23,9 @@ interface MessageService {
 
     fun create(messageDTO: MessageDTO): MessageDTO?
 
-    fun getWaitedMessages(chatId: String): List<MessageDTO>
+    fun getWaitedMessages(chatId: String): List<MessageDTO>?
+
+    fun ratingAndClosingSession(userChatId: String, rate: Double)
 
 }
 
@@ -44,7 +46,7 @@ class UserServiceImpl(
 
     override fun update(user: User) {
         user.run {
-            role?.let { user.role = role }
+            role.let { user.role = role }
             botState.let { user.botState = botState }
             languages.let { user.languages = languages }
             phoneNumber?.let { user.phoneNumber = phoneNumber }
@@ -78,13 +80,30 @@ class MessageServiceImpl(
     private val userRepo: UserRepository,
     private val sessionRepo: SessionRepository,
     private val messageRepo: MessageRepository,
-    private val attachmentService: AttachmentService,
     private val languageRepository: LanguageRepository,
 ) : MessageService {
     override fun create(messageDTO: MessageDTO): MessageDTO? {
         messageDTO.run {
             var result: MessageDTO? = null
             userRepo.findByChatIdAndDeletedFalse(senderChatId)?.let { senderUser ->
+                sessionRepo.findByStatusTrueAndOperator(senderUser)?.let { session ->
+                    session.operator?.let {
+                        val toDTO = toDTO(
+                            messageRepo.save(
+                                Message(
+                                    telegramMessageId,
+                                    replyTelegramMessageId,
+                                    time,
+                                    session,
+                                    senderUser,
+                                    attachment,
+                                    text
+                                )
+                            ), session.operator?.chatId, attachment
+                        )
+                        result = toDTO
+                    }
+                }
                 sessionRepo.findByStatusTrueAndUser(senderUser)?.let { session ->
                     session.operator?.let {
                         val toDTO = toDTO(
@@ -95,6 +114,7 @@ class MessageServiceImpl(
                                     time,
                                     session,
                                     senderUser,
+                                    attachment,
                                     text
                                 )
                             ), session.operator?.chatId, attachment
@@ -112,8 +132,9 @@ class MessageServiceImpl(
                                     telegramMessageId,
                                     replyTelegramMessageId,
                                     time,
-                                    Session(true, senderUser.languages[0], senderUser, it[0]),
+                                    sessionRepo.save(Session(true, senderUser.languages[0], time, senderUser, it[0])),
                                     senderUser,
+                                    attachment,
                                     text
                                 )
                             ), it[0]?.chatId, attachment
@@ -125,8 +146,9 @@ class MessageServiceImpl(
                                 telegramMessageId,
                                 replyTelegramMessageId,
                                 time,
-                                Session(true, senderUser.languages[0], senderUser, null),
+                                sessionRepo.save(Session(true, senderUser.languages[0], time, senderUser, null)),
                                 senderUser,
+                                attachment,
                                 text
                             )
                         )
@@ -138,26 +160,46 @@ class MessageServiceImpl(
         }
     }
 
-    override fun getWaitedMessages(chatId: String): List<MessageDTO> {
+    override fun getWaitedMessages(chatId: String): List<MessageDTO>? {
         val operator = userRepo.findByChatIdAndDeletedFalse(chatId)
-        sessionRepo.findAllByStatusTrueAndSessionLanguageInAndOperatorIsNull(operator?.languages).let {
-            it[0]?.let { session ->
-                session.operator = operator
-                sessionRepo.save(session)
-                messageRepo.findAllBySessionAndDeletedFalseOrderByTime(
-                    session
-                ).forEach {
-//                    toDTO(it, chatId, attachmentService.create(it))
+        var messageDTOs: List<MessageDTO>? = null
+        sessionRepo.findAllByStatusTrueAndSessionLanguageInAndOperatorIsNullOrderByTime(operator?.languages).let {
+            if (it.isNotEmpty()) {
+                it[0]?.let { session ->
+                    session.operator = operator
+                    sessionRepo.save(session)
+                    val messages = messageRepo.findAllBySessionAndDeletedFalseOrderByTime(session)
+                    messageDTOs = messages.map { message ->
+                        toDTO(
+                            message,
+                            chatId,
+                            message.attachment
+                        )
+                    }
                 }
             }
         }
-        TODO("Not yet implemented")
+        return messageDTOs
+    }
+
+    override fun ratingAndClosingSession(userChatId: String, rate: Double) {
+        userRepo.findByChatIdAndDeletedFalse(userChatId)?.let {
+            sessionRepo.findByStatusTrueAndUser(it)?.run {
+                this.operator?.run {
+                    this.rate = (this.rate + rate) / 2
+                    userRepo.save(this)
+                }
+                this.status = false
+                sessionRepo.save(this)
+            }
+        }
     }
 
 }
 
 @Service
 interface AttachmentService {
+//    fun download()
 }
 
 @Service
