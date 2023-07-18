@@ -19,6 +19,12 @@ interface UserService {
 
 }
 
+interface MessageService {
+
+    fun create(messageDTO: MessageDTO): MessageDTO?
+
+    fun getWaitedMessages(chatId: String): List<MessageDTO>
+
 }
 
 @Service
@@ -45,7 +51,7 @@ class UserServiceImpl(
         }
         userRepository.save(user)
     }
-}
+
 
     override fun getAll(pageable: Pageable) =
         userRepository.findAllByDeletedFalse(pageable).map { GetUserDTO.toDTO(it) }
@@ -149,6 +155,7 @@ class MessageServiceImpl(
 
 }
 
+@Service
 interface AttachmentService {
     fun create(fileId: String, fileName: String, contentType: AttachmentContentType)
 }
