@@ -61,13 +61,29 @@ class TelegramBotService(
 
             if (message.hasText()) {
                 val text = message.text
+
+
+
+
                 when {
                     text.equals("/start") -> {
-                        if (user.botState == BotState.START) {
-                            chooseLanguage(user, message.from.firstName)
-                        } else if (user.phoneNumber == null) {
-                            sendContactRequest(user, languageUtil.contactButtonTxt(userLang))
+
+                        when (user.role) {
+
+                            Role.OPERATOR -> {
+                                onlineOfflineMenu(user, userLang)
+                            }
+
+                            Role.USER -> {
+                                if (user.botState == BotState.START) {
+                                    chooseLanguage(user, message.from.firstName)
+                                } else if (user.phoneNumber == null) {
+                                    sendContactRequest(user, languageUtil.contactButtonTxt(userLang))
+                                }
+                            }
+
                         }
+
 
                     }
 
