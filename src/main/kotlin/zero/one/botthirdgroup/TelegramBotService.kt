@@ -6,6 +6,7 @@ import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForObject
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.GetFile
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.objects.Update
@@ -13,13 +14,16 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
+import java.sql.Timestamp
+import java.time.LocalDateTime
 
 
 @Service
 class TelegramBotService(
     private val userService: UserService,
     private val languageUtil: LanguageUtil,
-    private val languageRepository: LanguageRepository
+    private val languageRepository: LanguageRepository,
+    private val messageService: MessageService,
 ) : TelegramLongPollingBot() {
 
     @Value("\${telegram.bot.username}")
@@ -42,6 +46,7 @@ class TelegramBotService(
         if (update!!.hasMessage()) {
             val message = update.message
             val chatId = message.chatId.toString()
+
 
             val user = userService.createOrTgUser(chatId)
             val userLang: LanguageName = user.languages[0].name
@@ -111,7 +116,18 @@ class TelegramBotService(
 
                     }
 
+
                     user.botState == BotState.ASK_QUESTION -> {
+                        val create = messageService.create(
+                            MessageDTO(
+                                message.messageId,
+                                null,
+                                Timestamp(System.currentTimeMillis()),
+                                user.chatId, null, text, null
+                            )
+                        )
+
+                        sendText(userService.createOrTgUser(create?.toChatId.toString()), create?.text.toString())
 
                     }
 

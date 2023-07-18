@@ -1,10 +1,11 @@
 package zero.one.botthirdgroup
 
 import java.sql.Timestamp
+import java.time.LocalDateTime
 
 data class MessageDTO(
-    val telegramMessageId: Long,
-    val replyTelegramMessageId: Long,
+    val telegramMessageId: Int,
+    val replyTelegramMessageId: Int?,
     val time: Timestamp,
     val senderChatId: String,
     val toChatId: String?,

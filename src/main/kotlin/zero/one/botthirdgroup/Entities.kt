@@ -48,8 +48,8 @@ class Attachment(
 
 @Entity
 class Message(
-    var telegramMessageId: Long,
-    var replyTelegramMessageId: Long,
+    var telegramMessageId: Int,
+    var replyTelegramMessageId: Int?,
     var time: Timestamp,
     @ManyToOne var session: Session,
     @ManyToOne var sender: User,
