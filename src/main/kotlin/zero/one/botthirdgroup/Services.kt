@@ -15,11 +15,17 @@ interface UserService {
 
 @Service
 class UserServiceImpl(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val languageRepository: LanguageRepository
 ) : UserService {
     override fun createOrTgUser(chatId: String): User {
         return userRepository.findByChatIdAndDeletedFalse(chatId)
-            ?: userRepository.save(User(chatId))
+            ?: userRepository.save(
+                User(
+                    chatId,
+                    mutableListOf(languageRepository.findByName(LanguageName.UZ))
+                )
+            )
     }
 
     override fun update(user: User) {

@@ -16,5 +16,7 @@ enum class BotState {
     START,
     CHOOSE_LANG,
     SHARE_CONTACT,
-    ONLINE
+    ONLINE,
+    ASK_QUESTION,
+    USER_MENU
 }
