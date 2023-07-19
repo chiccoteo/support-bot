@@ -65,6 +65,7 @@ class UserServiceImpl(
     override fun updateRole(phone: String) {
         val user = userRepository.findByPhoneNumberAndDeletedFalse(phone)
         user.role = Role.OPERATOR
+        user.botState=BotState.OFFLINE
         userRepository.save(user)
     }
 
