@@ -62,6 +62,8 @@ class TelegramBot(
                             chooseLanguage(user, message.from.firstName)
                         } else if (user.phoneNumber == null) {
                             sendContactRequest(user, languageUtil.contactButtonTxt(userLang))
+                        }else if (user.botState==BotState.USER_MENU){
+                            userMenu(user)
                         }
                     }
                 }
@@ -81,39 +83,37 @@ class TelegramBot(
                     } else {
 
                     }
-                }
+                } else
 
                 // Sending messages for User
-                if (user.botState == BotState.ASK_QUESTION) {
-                    val create = messageService.create(
-                        MessageDTO(
-                            message.messageId,
-                            null,
-                            Timestamp(System.currentTimeMillis()),
-                            user.chatId, null, text, null
+                    if (user.botState == BotState.ASK_QUESTION) {
+                        val create = messageService.create(
+                            MessageDTO(
+                                message.messageId,
+                                null,
+                                Timestamp(System.currentTimeMillis()),
+                                user.chatId, null, text, null
+                            )
                         )
-                    )
 
-                    if (create != null) {
-                        val tgUser = userService.createOrTgUser(create.toChatId.toString())
-//                        sendText(tgUser, create.text.toString())
-                        val sendMessage = SendMessage()
-                        sendMessage.text = create.text.toString()
-                        sendMessage.chatId = tgUser.chatId
-                        sendMessage.replyMarkup = closeSession(userLang)
-                        execute(sendMessage)
-                        tgUser.botState = BotState.SESSION
-                        userService.update(tgUser)
+                        if (create != null) {
+                            val tgUser = userService.createOrTgUser(create.toChatId.toString())
+                            val sendMessage = SendMessage()
+                            sendMessage.text = create.text.toString()
+                            sendMessage.chatId = tgUser.chatId
+                            execute(sendMessage)
+                            tgUser.botState = BotState.SESSION
+                            userService.update(tgUser)
+                        }
                     }
-                }
 
-                if (user.role == Role.OPERATOR) {
+                if (user.role == Role.OPERATOR && (user.botState == BotState.OFFLINE || user.botState == BotState.ONLINE)) {
                     when (text) {
                         "ONLINE" -> {
                             user.botState = BotState.ONLINE
                             userService.update(user)
+                            closeSession(user, userLang)
                             val waitedMessages = messageService.getWaitedMessages(user.chatId)
-
                             waitedMessages?.let {
                                 user.botState = BotState.SESSION
                                 userService.update(user)
@@ -128,10 +128,8 @@ class TelegramBot(
                                             }
                                         }
                                     } else {
-
                                         waitedMessage.attachment.let { attachment ->
                                             when (attachment.contentType) {
-
                                                 AttachmentContentType.PHOTO -> {
                                                     execute(
                                                         SendPhoto(
@@ -165,9 +163,6 @@ class TelegramBot(
                             }
                             if (user.botState != BotState.SESSION)
                                 onlineOfflineMenu(user, userLang)
-//                            else
-//                                closeSession(user, userLang)
-
                         }
 
                         "OFFLINE" -> {
@@ -197,7 +192,6 @@ class TelegramBot(
                         val tgUser = userService.createOrTgUser(it.toChatId.toString())
                         sendText(tgUser, it.text.toString())
                     }
-
                 }
 
 
@@ -333,19 +327,20 @@ class TelegramBot(
         execute(sendMessage)
     }
 
-    private fun closeSession(userLang: LanguageName): ReplyKeyboardMarkup {
-//        val sendMessage = SendMessage()
+    private fun closeSession(user: User, userLang: LanguageName) {
+        val sendMessage = SendMessage()
         val rows: MutableList<KeyboardRow> = mutableListOf()
         val row1 = KeyboardRow()
         val button = KeyboardButton(languageUtil.closeSessionBtnTxt(userLang))
         row1.add(button)
         rows.add(row1)
-//        sendMessage.text = "Sessiyani yopmoqchimisiz?"
-//        sendMessage.chatId = user.chatId
+        sendMessage.text = "Siz sessiyaga bog'landingiz"
+        sendMessage.chatId = user.chatId
         val markup = ReplyKeyboardMarkup()
         markup.resizeKeyboard = true
         markup.keyboard = rows
-        return markup
+        sendMessage.replyMarkup = markup
+        execute(sendMessage)
     }
 
     private fun onlineOfflineMenu(user: User, userLang: LanguageName) {
@@ -471,7 +466,7 @@ class TelegramBot(
 
     }
 
-    fun sendText(user: User, text: String) {
+    public fun sendText(user: User, text: String) {
         val sendMessage = SendMessage()
         sendMessage.text = text
         sendMessage.chatId = user.chatId
