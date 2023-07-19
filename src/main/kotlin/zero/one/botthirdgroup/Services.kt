@@ -32,7 +32,7 @@ interface MessageService {
 @Service
 class UserServiceImpl(
     private val userRepository: UserRepository,
-    private val languageRepository: LanguageRepository
+    private val languageRepository: LanguageRepository,
 ) : UserService {
     override fun createOrTgUser(chatId: String): User {
         return userRepository.findByChatIdAndDeletedFalse(chatId)
@@ -65,14 +65,13 @@ class UserServiceImpl(
     override fun updateRole(phone: String) {
         val user = userRepository.findByPhoneNumberAndDeletedFalse(phone)
         user.role = Role.OPERATOR
-        user.botState = BotState.OFFLINE
+        user.botState=BotState.OFFLINE
         userRepository.save(user)
     }
 
     override fun updateLang(phone: String, languages: List<Language>) {
         val user = userRepository.findByPhoneNumberAndDeletedFalse(phone)
         user.languages = languages.toMutableList()
-
         userRepository.save(user)
     }
 }
@@ -147,7 +146,8 @@ class MessageServiceImpl(
                                 telegramMessageId,
                                 replyTelegramMessageId,
                                 time,
-                                sessionRepo.findByStatusTrueAndUser(senderUser) ?: sessionRepo.save(Session(true, senderUser.languages[0], time, senderUser, null)),
+                                sessionRepo.findByStatusTrueAndUser(senderUser) ?:
+                                sessionRepo.save(Session(true, senderUser.languages[0], time, senderUser, null)),
                                 senderUser,
                                 attachment,
                                 text

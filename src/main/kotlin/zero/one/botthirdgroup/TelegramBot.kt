@@ -6,9 +6,7 @@ import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForObject
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.GetFile
-import org.telegram.telegrambots.meta.api.methods.send.SendDocument
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage
-import org.telegram.telegrambots.meta.api.methods.send.SendPhoto
+import org.telegram.telegrambots.meta.api.methods.send.*
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.objects.Contact
 import org.telegram.telegrambots.meta.api.objects.InputFile
@@ -149,6 +147,42 @@ class TelegramBot(
                                                 }
 
                                                 AttachmentContentType.VIDEO -> {
+                                                    execute(
+                                                        SendVideo(
+                                                            waitedMessage.toChatId.toString(),
+                                                            InputFile(File(attachment.pathName))
+                                                        )
+                                                    )
+                                                }
+
+                                                AttachmentContentType.AUDIO -> {
+                                                    execute(
+                                                        SendAudio(
+                                                            waitedMessage.toChatId.toString(),
+                                                            InputFile(File(attachment.pathName))
+                                                        )
+                                                    )
+                                                }
+
+                                                AttachmentContentType.VIDEO_NOTE -> {
+                                                    execute(
+                                                        SendVideoNote(
+                                                            waitedMessage.toChatId.toString(),
+                                                            InputFile(File(attachment.pathName))
+                                                        )
+                                                    )
+                                                }
+
+                                                AttachmentContentType.VOICE -> {
+                                                    execute(
+                                                        SendVoice(
+                                                            waitedMessage.toChatId.toString(),
+                                                            InputFile(File(attachment.pathName))
+                                                        )
+                                                    )
+                                                }
+
+                                                AttachmentContentType.STICKER -> {
 
                                                 }
 
@@ -209,7 +243,7 @@ class TelegramBot(
             } else if (message.hasPhoto()) {
 
                 val photo = message.photo.last()
-                val create = create(photo.fileId, photo.filePath, AttachmentContentType.PHOTO)
+                val create = create(photo.fileId, "asd.png", AttachmentContentType.PHOTO)
 
                 val messageDTO = messageService.create(
                     MessageDTO(
@@ -223,7 +257,7 @@ class TelegramBot(
                     )
                 )
 
-                messageDTO.let {
+                messageDTO?.let {
                     execute(
                         SendPhoto(
                             it?.toChatId.toString(),
@@ -234,12 +268,142 @@ class TelegramBot(
 
             } else if (message.hasDocument()) {
 
+                val document = message.document
+
+                val attachment = create(document.fileId, document.fileName, AttachmentContentType.DOCUMENT)
+
+                val messageDTO = messageService.create(
+                    MessageDTO(
+                        message.messageId,
+                        null,
+                        Timestamp(System.currentTimeMillis()),
+                        user.chatId,
+                        null,
+                        null,
+                        attachment
+                    )
+                )
+
+                messageDTO?.let {
+                    execute(
+                        SendDocument(
+                            it?.toChatId.toString(),
+                            InputFile(it?.attachment?.pathName?.let { it1 -> File(it1) })
+                        )
+                    )
+                }
+
 
             } else if (message.hasSticker()) {
+                println(message.sticker)
+            } else if (message.hasVideo()) {
+
+                val video = message.video
+
+                val attachment = create(video.fileId, video.fileName, AttachmentContentType.VIDEO)
+
+                val messageDTO = messageService.create(
+                    MessageDTO(
+                        message.messageId,
+                        null,
+                        Timestamp(System.currentTimeMillis()),
+                        user.chatId,
+                        null,
+                        null,
+                        attachment
+                    )
+                )
+
+                messageDTO?.let {
+                    execute(
+                        SendVideo(
+                            it?.toChatId.toString(),
+                            InputFile(it?.attachment?.pathName?.let { it1 -> File(it1) })
+                        )
+                    )
+                }
+
+
+            } else if (message.hasAudio()) {
+                val audio = message.audio
+
+                val attachment = create(audio.fileId, "audio.mp3", AttachmentContentType.AUDIO)
+
+                val messageDTO = messageService.create(
+                    MessageDTO(
+                        message.messageId,
+                        null,
+                        Timestamp(System.currentTimeMillis()),
+                        user.chatId,
+                        null,
+                        null,
+                        attachment
+                    )
+                )
+
+                messageDTO?.let {
+                    execute(
+                        SendAudio(
+                            it?.toChatId.toString(),
+                            InputFile(it?.attachment?.pathName?.let { it1 -> File(it1) })
+                        )
+                    )
+                }
 
             } else if (message.hasVoice()) {
 
+                val voice = message.voice
+
+                val create = create(voice.fileId, "asd.ogg", AttachmentContentType.VOICE)
+
+                val messageDTO = messageService.create(
+                    MessageDTO(
+                        message.messageId,
+                        null,
+                        Timestamp(System.currentTimeMillis()),
+                        user.chatId,
+                        null,
+                        null,
+                        create
+                    )
+                )
+
+                messageDTO?.let {
+                    execute(
+                        SendVoice(
+                            it?.toChatId.toString(),
+                            InputFile(it?.attachment?.pathName?.let { it1 -> File(it1) })
+                        )
+                    )
+                }
+
             } else if (message.hasVideoNote()) {
+
+                val videoNote = message.videoNote
+
+                val attachment = create(videoNote.fileId, "video.mp4", AttachmentContentType.VIDEO_NOTE)
+
+
+                val messageDTO = messageService.create(
+                    MessageDTO(
+                        message.messageId,
+                        null,
+                        Timestamp(System.currentTimeMillis()),
+                        user.chatId,
+                        null,
+                        null,
+                        attachment
+                    )
+                )
+
+                messageDTO?.let {
+                    execute(
+                        SendVideoNote(
+                            it?.toChatId.toString(),
+                            InputFile(it?.attachment?.pathName?.let { it1 -> File(it1) })
+                        )
+                    )
+                }
 
             }
         } else if (update.hasCallbackQuery()) {
