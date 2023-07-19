@@ -9,10 +9,10 @@ interface UserService {
     fun createOrTgUser(chatId: String): User
     fun update(user: User)
     fun getAll(pageable: Pageable): Page<GetUserDTO>
-    fun getUserByRole(role: Role, pageable: Pageable): Page<GetUserDTO>
+    fun getUsers(pageable: Pageable): Page<GetUserDTO>
+    fun getOperators(pageable: Pageable): Page<GetUserDTO>
     fun updateRole(phone: String)
-    fun updateLang(phone: String, languages: List<Language>)
-
+    fun updateLang(dto: LanguageUpdateDTO)
 }
 
 interface MessageService {
@@ -25,7 +25,9 @@ interface MessageService {
 
     fun getOperatorFromSession(userChatId: String): String
 
-    fun ratingAndClosingSession(userChatId: String, rate: Double)
+    fun ratingOperator(operatorChatId: String, rate: Double)
+
+    fun closingSession(operatorChatId: String)
 
 }
 
@@ -34,6 +36,7 @@ class UserServiceImpl(
     private val userRepository: UserRepository,
     private val languageRepository: LanguageRepository,
 ) : UserService {
+
     override fun createOrTgUser(chatId: String): User {
         return userRepository.findByChatIdAndDeletedFalse(chatId)
             ?: userRepository.save(
@@ -54,26 +57,34 @@ class UserServiceImpl(
         userRepository.save(user)
     }
 
-
     override fun getAll(pageable: Pageable) =
         userRepository.findAllByDeletedFalse(pageable).map { GetUserDTO.toDTO(it) }
 
-    override fun getUserByRole(role: Role, pageable: Pageable): Page<GetUserDTO> {
-        return userRepository.findByRoleAndDeletedFalse(role, pageable).map { GetUserDTO.toDTO(it) }
+    override fun getUsers(pageable: Pageable): Page<GetUserDTO> {
+        return userRepository.findByRoleAndDeletedFalse(Role.USER, pageable).map {
+            GetUserDTO.toDTO(it)
+        }
+    }
+
+    override fun getOperators(pageable: Pageable): Page<GetUserDTO> {
+        return userRepository.findByRoleAndDeletedFalse(Role.OPERATOR, pageable).map {
+            GetUserDTO.toDTO(it)
+        }
     }
 
     override fun updateRole(phone: String) {
         val user = userRepository.findByPhoneNumberAndDeletedFalse(phone)
         user.role = Role.OPERATOR
-        user.botState=BotState.OFFLINE
+        user.botState = BotState.OFFLINE
         userRepository.save(user)
     }
 
-    override fun updateLang(phone: String, languages: List<Language>) {
-        val user = userRepository.findByPhoneNumberAndDeletedFalse(phone)
-        user.languages = languages.toMutableList()
+    override fun updateLang(dto: LanguageUpdateDTO) {
+        val user = userRepository.findByPhoneNumberAndDeletedFalse(dto.phoneNumber)
+        user.languages = languageRepository.findAllById(dto.languages)
         userRepository.save(user)
     }
+
 }
 
 @Service
@@ -83,6 +94,7 @@ class MessageServiceImpl(
     private val messageRepo: MessageRepository,
     private val languageRepository: LanguageRepository,
 ) : MessageService {
+
     override fun create(messageDTO: MessageDTO): MessageDTO? {
         messageDTO.run {
             var result: MessageDTO? = null
@@ -146,8 +158,15 @@ class MessageServiceImpl(
                                 telegramMessageId,
                                 replyTelegramMessageId,
                                 time,
-                                sessionRepo.findByStatusTrueAndUser(senderUser) ?:
-                                sessionRepo.save(Session(true, senderUser.languages[0], time, senderUser, null)),
+                                sessionRepo.findByStatusTrueAndUser(senderUser) ?: sessionRepo.save(
+                                    Session(
+                                        true,
+                                        senderUser.languages[0],
+                                        time,
+                                        senderUser,
+                                        null
+                                    )
+                                ),
                                 senderUser,
                                 attachment,
                                 text
@@ -205,29 +224,20 @@ class MessageServiceImpl(
         return operatorChatId
     }
 
-    override fun ratingAndClosingSession(userChatId: String, rate: Double) {
-        userRepo.findByChatIdAndDeletedFalse(userChatId)?.let {
-            sessionRepo.findByStatusTrueAndUser(it)?.run {
-                this.operator?.run {
-                    this.rate = (this.rate + rate) / 2
-                    userRepo.save(this)
-                }
+    override fun ratingOperator(operatorChatId: String, rate: Double) {
+        userRepo.findByChatIdAndDeletedFalse(operatorChatId)?.let {
+            it.rate = (it.rate + rate) / 2
+            userRepo.save(it)
+        }
+    }
+
+    override fun closingSession(operatorChatId: String) {
+        userRepo.findByChatIdAndDeletedFalse(operatorChatId)?.let {
+            sessionRepo.findByStatusTrueAndOperator(it)?.run {
                 this.status = false
                 sessionRepo.save(this)
             }
         }
     }
-
-}
-
-@Service
-interface AttachmentService {
-//    fun download()
-}
-
-@Service
-class AttachmentServiceImpl(
-    private val attachmentRepo: AttachmentRepository,
-) : AttachmentService {
 
 }

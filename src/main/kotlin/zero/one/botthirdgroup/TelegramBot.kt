@@ -7,9 +7,9 @@ import org.springframework.web.client.getForObject
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.GetFile
 import org.telegram.telegrambots.meta.api.methods.send.*
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.objects.Contact
 import org.telegram.telegrambots.meta.api.objects.InputFile
+import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup
@@ -45,12 +45,15 @@ class TelegramBot(
     override fun getBotToken(): String = token
 
     override fun onUpdateReceived(update: Update) {
+
         val user = userService.createOrTgUser(getChatId(update))
+
         if (update.hasMessage()) {
             val message = update.message
             val userLang: LanguageName = user.languages[0].name
             if (message.hasText()) {
                 val text = message.text
+
                 if (text.equals("/start")) {
                     if (user.role == Role.OPERATOR) {
                         if (user.botState != BotState.SESSION)
@@ -60,61 +63,71 @@ class TelegramBot(
                             chooseLanguage(user, message.from.firstName)
                         } else if (user.phoneNumber == null) {
                             sendContactRequest(user, languageUtil.contactButtonTxt(userLang))
-                        }else if (user.botState==BotState.USER_MENU){
+                        } else if (user.botState == BotState.USER_MENU) {
                             userMenu(user)
                         }
                     }
                 }
+
                 if (user.botState == BotState.USER_MENU) {
                     if (text.equals("Savol so'rash❓") || text.equals("Задайте вопрос❓") || text.equals("Ask question❓")) {
                         val message1 = SendMessage()
                         message1.chatId = getChatId(update)
                         message1.text = languageUtil.pleaseGiveQuestion(userLang)
-                        // Create a ReplyKeyboardRemove instance and set it as the reply markup
                         val replyKeyboardRemove = ReplyKeyboardRemove(true)
                         message1.replyMarkup = replyKeyboardRemove
                         execute(message1)
                         user.botState = BotState.ASK_QUESTION
                         userService.update(user)
                     } else if (text.equals("Sozlamalar ⚙️") || text.equals("Настройки ⚙️") || text.equals("Settings ⚙️")) {
-
-                    } else {
-
+                        user.botState = BotState.CHANGE_LANG
+                        userService.update(user)
+                        chooseLanguage(user, message.from.firstName)
                     }
-                } else
+                }
 
                 // Sending messages for User
-                    if (user.botState == BotState.ASK_QUESTION) {
+                else if (user.botState == BotState.ASK_QUESTION) {
                         val create = messageService.create(
                             MessageDTO(
                                 message.messageId,
-                                null,
+                                getReplyMessageTgId(message),
                                 Timestamp(System.currentTimeMillis()),
                                 user.chatId, null, text, null
                             )
                         )
-
                         if (create != null) {
                             val tgUser = userService.createOrTgUser(create.toChatId.toString())
                             val sendMessage = SendMessage()
                             sendMessage.text = create.text.toString()
-                            sendMessage.chatId = tgUser.chatId
+                            sendMessage.chatId=tgUser.chatId
+                            if (tgUser.botState == BotState.ONLINE) {
+                                val rows: MutableList<KeyboardRow> = mutableListOf()
+                                val row1 = KeyboardRow()
+                                val button = KeyboardButton(languageUtil.closeSessionBtnTxt(userLang))
+                                row1.add(button)
+                                rows.add(row1)
+                                val markup = ReplyKeyboardMarkup()
+                                markup.resizeKeyboard = true
+                                markup.keyboard = rows
+                                sendMessage.replyMarkup = markup
+                            }
                             execute(sendMessage)
                             tgUser.botState = BotState.SESSION
                             userService.update(tgUser)
                         }
                     }
 
-                if (user.role == Role.OPERATOR && (user.botState == BotState.OFFLINE || user.botState == BotState.ONLINE)) {
+                if (user.role == Role.OPERATOR) {
                     when (text) {
                         "ONLINE" -> {
                             user.botState = BotState.ONLINE
                             userService.update(user)
-                            closeSession(user, userLang)
                             val waitedMessages = messageService.getWaitedMessages(user.chatId)
                             waitedMessages?.let {
                                 user.botState = BotState.SESSION
                                 userService.update(user)
+                                closeSession(user, userLang)
                                 for (waitedMessage in it) {
                                     if (waitedMessage.attachment == null) {
                                         waitedMessage.run {
@@ -185,8 +198,6 @@ class TelegramBot(
                                                 AttachmentContentType.STICKER -> {
 
                                                 }
-
-                                                else -> {}
                                             }
                                         }
 
@@ -210,45 +221,48 @@ class TelegramBot(
 
                 // Sending messages for Operator
                 if (user.botState == BotState.SESSION) {
-                    val create = messageService.create(
-                        MessageDTO(
-                            message.messageId,
-                            null,
-                            Timestamp(System.currentTimeMillis()),
-                            user.chatId,
-                            null,
-                            text,
-                            null
+                    if (text.equals("Sessiyani yopish")) {
+                        val userChatId = messageService.getUserFromSession(getChatId(update))
+                        messageService.closingSession(getChatId(update))
+                        onlineOfflineMenu(user, userLang)
+                        userService.createOrTgUser(userChatId).run {
+                            this.botState = BotState.RATING
+                            userService.update(this)
+                        }
+                        rateOperator(user, userLang, userChatId)
+                    } else {
+                        val create = messageService.create(
+                            MessageDTO(
+                                message.messageId,
+                                getReplyMessageTgId(message),
+                                Timestamp(System.currentTimeMillis()),
+                                user.chatId,
+                                null,
+                                text,
+                                null
+                            )
                         )
-                    )
 
-                    create?.let {
-                        val tgUser = userService.createOrTgUser(it.toChatId.toString())
-                        sendText(tgUser, it.text.toString())
+                        create?.let {
+                            val tgUser = userService.createOrTgUser(it.toChatId.toString())
+                            sendText(tgUser, it.text.toString())
+                        }
                     }
                 }
 
-
-//                    else -> sendText(user, languageUtil.chooseMenuTextReq(userLang))
-            } else if (message.hasContact()) {
+            }
+            else if (message.hasContact()) {
                 if (user.botState == BotState.SHARE_CONTACT) {
                     getContact(user, message.contact)
                 }
-//                val contact = message.contact
-//                user.phoneNumber = contact.phoneNumber
-//                user.name = contact.firstName + " " + contact?.lastName
-//                user.botState = BotState.USER_MENU
-//                userService.update(user)
-//                userMenu(user, userLang)
-            } else if (message.hasPhoto()) {
-
+            }
+            else if (message.hasPhoto()) {
                 val photo = message.photo.last()
                 val create = create(photo.fileId, "asd.png", AttachmentContentType.PHOTO)
-
                 val messageDTO = messageService.create(
                     MessageDTO(
                         message.messageId,
-                        null,
+                        getReplyMessageTgId(message),
                         Timestamp(System.currentTimeMillis()),
                         user.chatId,
                         null,
@@ -256,26 +270,22 @@ class TelegramBot(
                         create
                     )
                 )
-
                 messageDTO?.let {
                     execute(
                         SendPhoto(
-                            it?.toChatId.toString(),
-                            InputFile(it?.attachment?.pathName?.let { it1 -> File(it1) })
+                            it.toChatId.toString(),
+                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
                         )
                     )
                 }
-
-            } else if (message.hasDocument()) {
-
+            }
+            else if (message.hasDocument()) {
                 val document = message.document
-
                 val attachment = create(document.fileId, document.fileName, AttachmentContentType.DOCUMENT)
-
                 val messageDTO = messageService.create(
                     MessageDTO(
                         message.messageId,
-                        null,
+                        getReplyMessageTgId(message),
                         Timestamp(System.currentTimeMillis()),
                         user.chatId,
                         null,
@@ -283,29 +293,25 @@ class TelegramBot(
                         attachment
                     )
                 )
-
                 messageDTO?.let {
                     execute(
                         SendDocument(
-                            it?.toChatId.toString(),
-                            InputFile(it?.attachment?.pathName?.let { it1 -> File(it1) })
+                            it.toChatId.toString(),
+                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
                         )
                     )
                 }
-
-
-            } else if (message.hasSticker()) {
+            }
+            else if (message.hasSticker()) {
                 println(message.sticker)
-            } else if (message.hasVideo()) {
-
+            }
+            else if (message.hasVideo()) {
                 val video = message.video
-
                 val attachment = create(video.fileId, video.fileName, AttachmentContentType.VIDEO)
-
                 val messageDTO = messageService.create(
                     MessageDTO(
                         message.messageId,
-                        null,
+                        getReplyMessageTgId(message),
                         Timestamp(System.currentTimeMillis()),
                         user.chatId,
                         null,
@@ -313,26 +319,22 @@ class TelegramBot(
                         attachment
                     )
                 )
-
                 messageDTO?.let {
                     execute(
                         SendVideo(
-                            it?.toChatId.toString(),
-                            InputFile(it?.attachment?.pathName?.let { it1 -> File(it1) })
+                            it.toChatId.toString(),
+                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
                         )
                     )
                 }
-
-
-            } else if (message.hasAudio()) {
+            }
+            else if (message.hasAudio()) {
                 val audio = message.audio
-
                 val attachment = create(audio.fileId, "audio.mp3", AttachmentContentType.AUDIO)
-
                 val messageDTO = messageService.create(
                     MessageDTO(
                         message.messageId,
-                        null,
+                        getReplyMessageTgId(message),
                         Timestamp(System.currentTimeMillis()),
                         user.chatId,
                         null,
@@ -340,104 +342,127 @@ class TelegramBot(
                         attachment
                     )
                 )
-
                 messageDTO?.let {
                     execute(
                         SendAudio(
-                            it?.toChatId.toString(),
-                            InputFile(it?.attachment?.pathName?.let { it1 -> File(it1) })
-                        )
-                    )
-                }
-
-            } else if (message.hasVoice()) {
-
-                val voice = message.voice
-
-                val create = create(voice.fileId, "asd.ogg", AttachmentContentType.VOICE)
-
-                val messageDTO = messageService.create(
-                    MessageDTO(
-                        message.messageId,
-                        null,
-                        Timestamp(System.currentTimeMillis()),
-                        user.chatId,
-                        null,
-                        null,
-                        create
-                    )
-                )
-
-                messageDTO?.let {
-                    execute(
-                        SendVoice(
-                            it?.toChatId.toString(),
-                            InputFile(it?.attachment?.pathName?.let { it1 -> File(it1) })
-                        )
-                    )
-                }
-
-            } else if (message.hasVideoNote()) {
-
-                val videoNote = message.videoNote
-
-                val attachment = create(videoNote.fileId, "video.mp4", AttachmentContentType.VIDEO_NOTE)
-
-
-                val messageDTO = messageService.create(
-                    MessageDTO(
-                        message.messageId,
-                        null,
-                        Timestamp(System.currentTimeMillis()),
-                        user.chatId,
-                        null,
-                        null,
-                        attachment
-                    )
-                )
-
-                messageDTO?.let {
-                    execute(
-                        SendVideoNote(
-                            it?.toChatId.toString(),
-                            InputFile(it?.attachment?.pathName?.let { it1 -> File(it1) })
+                            it.toChatId.toString(),
+                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
                         )
                     )
                 }
 
             }
-        } else if (update.hasCallbackQuery()) {
+            else if (message.hasVoice()) {
+                val voice = message.voice
+                val create = create(voice.fileId, "asd.ogg", AttachmentContentType.VOICE)
+                val messageDTO = messageService.create(
+                    MessageDTO(
+                        message.messageId,
+                        getReplyMessageTgId(message),
+                        Timestamp(System.currentTimeMillis()),
+                        user.chatId,
+                        null,
+                        null,
+                        create
+                    )
+                )
+                messageDTO?.let {
+                    execute(
+                        SendVoice(
+                            it.toChatId.toString(),
+                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
+                        )
+                    )
+                }
+            }
+            else if (message.hasVideoNote()) {
+                val videoNote = message.videoNote
+                val attachment = create(videoNote.fileId, "video.mp4", AttachmentContentType.VIDEO_NOTE)
+                val messageDTO = messageService.create(
+                    MessageDTO(
+                        message.messageId,
+                        getReplyMessageTgId(message),
+                        Timestamp(System.currentTimeMillis()),
+                        user.chatId,
+                        null,
+                        null,
+                        attachment
+                    )
+                )
+                messageDTO?.let {
+                    execute(
+                        SendVideoNote(
+                            it.toChatId.toString(),
+                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
+                        )
+                    )
+                }
+            }
+        }
+
+        else if (update.hasCallbackQuery()) {
             val data = update.callbackQuery.data
-            if (user.botState == BotState.CHOOSE_LANG) {
+            if (user.botState == BotState.CHOOSE_LANG || user.botState == BotState.CHANGE_LANG) {
                 when (data) {
                     "UZ" -> {
                         user.languages = mutableListOf(languageRepository.findByName(LanguageName.UZ))
-                        sendContactRequest(
-                            user,
-                            languageUtil.contactButtonTxt(LanguageName.UZ)
-                        )
+                        if (user.botState == BotState.CHANGE_LANG) {
+                            user.botState = BotState.USER_MENU
+                            userService.update(user)
+                            userMenu(user)
+                        } else
+                            sendContactRequest(
+                                user,
+                                languageUtil.contactButtonTxt(LanguageName.UZ)
+                            )
                     }
 
                     "RU" -> {
                         user.languages = mutableListOf(languageRepository.findByName(LanguageName.RU))
-                        sendContactRequest(
-                            user,
-                            languageUtil.contactButtonTxt(LanguageName.RU)
-                        )
+                        if (user.botState == BotState.CHANGE_LANG) {
+                            user.botState = BotState.USER_MENU
+                            userService.update(user)
+                            userMenu(user)
+                        } else
+                            sendContactRequest(
+                                user,
+                                languageUtil.contactButtonTxt(LanguageName.RU)
+                            )
                     }
 
                     "ENG" -> {
                         user.languages = mutableListOf(languageRepository.findByName(LanguageName.ENG))
-                        sendContactRequest(
-                            user,
-                            languageUtil.contactButtonTxt(LanguageName.ENG)
-                        )
+                        if (user.botState == BotState.CHANGE_LANG) {
+                            user.botState = BotState.USER_MENU
+                            userService.update(user)
+                            userMenu(user)
+                        } else
+                            sendContactRequest(
+                                user,
+                                languageUtil.contactButtonTxt(LanguageName.ENG)
+                            )
                     }
                 }
-                user.botState = BotState.SHARE_CONTACT
+                if (user.botState != BotState.USER_MENU) {
+                    user.botState = BotState.SHARE_CONTACT
+                    userService.update(user)
+                }
+            }
+            if (user.botState == BotState.RATING) {
+                messageService.ratingOperator(data.substring(1), data.substring(0, 1).toDouble())
+                user.botState = BotState.USER_MENU
                 userService.update(user)
+                userMenu(user)
             }
         }
+
+    }
+
+    private fun getReplyMessageTgId(message: Message): Int? {
+        return if (message.isReply)
+            message.replyToMessage.messageId
+        else
+            null
     }
 
     private fun getChatId(update: Update): String {
@@ -458,36 +483,58 @@ class TelegramBot(
         userMenu(tgUser)
     }
 
-    private fun rateOperator(user: User, userLang: LanguageName) {
+    private fun rateOperator(operator: User, userLang: LanguageName, userChatId: String) {
+        val inlineKeyboardMarkup = InlineKeyboardMarkup()
+        val rows: MutableList<MutableList<InlineKeyboardButton>> = mutableListOf()
+        var row: MutableList<InlineKeyboardButton> = mutableListOf()
+        var button = InlineKeyboardButton()
+
+        button.text = "1"
+        button.callbackData = "1" + operator.chatId
+        row.add(button)
+        rows.add(row)
+
+        row = mutableListOf()
+        button = InlineKeyboardButton()
+        button.text = "2"
+        button.callbackData = "2" + operator.chatId
+        row.add(button)
+        rows.add(row)
+
+        row = mutableListOf()
+        button = InlineKeyboardButton()
+        button.text = "3"
+        button.callbackData = "3" + operator.chatId
+        row.add(button)
+        rows.add(row)
+
+        row = mutableListOf()
+        button = InlineKeyboardButton()
+        button.text = "4"
+        button.callbackData = "4" + operator.chatId
+        row.add(button)
+        rows.add(row)
+
+        row = mutableListOf()
+        button = InlineKeyboardButton()
+        button.text = "5"
+        button.callbackData = "5" + operator.chatId
+        row.add(button)
+        rows.add(row)
+
+        inlineKeyboardMarkup.keyboard = rows
+
         val sendMessage = SendMessage()
-        val rows: MutableList<KeyboardRow> = mutableListOf()
-
-        val row1 = KeyboardRow()
-        val row2 = KeyboardRow()
-
-        val one = KeyboardButton("1")
-        val two = KeyboardButton("2")
-        val three = KeyboardButton("3")
-        val four = KeyboardButton("4")
-        val five = KeyboardButton("5")
-
-
-        row1.add(one)
-        row1.add(two)
-        row1.add(three)
-        row2.add(four)
-        row2.add(five)
-        rows.add(row1)
-        rows.add(row2)
-
-        sendMessage.text = "Operatorni baholang 😀"
-        sendMessage.chatId = user.chatId
-
-
-        val markup = ReplyKeyboardMarkup()
-        markup.resizeKeyboard = true
-        markup.keyboard = rows
-        sendMessage.replyMarkup = markup
+        var text = ""
+        if (userLang == LanguageName.UZ)
+            text = "Operatorni baholang 😀"
+        if (userLang == LanguageName.ENG)
+            text = "Rate the operator 😀"
+        if (userLang == LanguageName.RU)
+            text = "Оцените оператора 😀"
+        sendMessage.text = text
+        sendMessage.chatId = userChatId
+        sendMessage.replyMarkup = inlineKeyboardMarkup
         execute(sendMessage)
     }
 
@@ -521,6 +568,10 @@ class TelegramBot(
             row1.add(onButton)
         if (user.botState == BotState.ONLINE)
             row1.add(offButton)
+        if (user.botState == BotState.SESSION) {
+            row1.add(onButton)
+            row1.add(offButton)
+        }
         rows.add(row1)
 
         sendMessage.text = languageUtil.chooseMenuTextReq(userLang)
@@ -556,15 +607,6 @@ class TelegramBot(
         execute(sendMessage)
     }
 
-    private fun deleteReplyKeyboard(user: User) {
-        val sendMessageRemove = SendMessage()
-        sendMessageRemove.chatId = user.chatId
-        sendMessageRemove.text = "."
-        sendMessageRemove.setReplyMarkup { ReplyKeyboardRemove(true) }
-        val message = execute(sendMessageRemove)
-        execute(DeleteMessage(user.chatId, message.messageId))
-    }
-
     private fun chooseLanguage(user: User, name: String) {
         val inlineKeyboardMarkup = InlineKeyboardMarkup()
         val sendMessage = SendMessage()
@@ -573,7 +615,7 @@ class TelegramBot(
 
         var button = InlineKeyboardButton()
         var row: MutableList<InlineKeyboardButton> = mutableListOf()
-        button.text = "UZ \uD83C\uDDFA\uD83C\uDDFF";
+        button.text = "UZ \uD83C\uDDFA\uD83C\uDDFF"
         button.callbackData = "UZ"
 
         row.add(button)
@@ -581,62 +623,53 @@ class TelegramBot(
 
         button = InlineKeyboardButton()
         row = mutableListOf()
-        button.text = "RU \uD83C\uDDF7\uD83C\uDDFA";
+        button.text = "RU \uD83C\uDDF7\uD83C\uDDFA"
         button.callbackData = "RU"
         row.add(button)
         rows.add(row)
 
         button = InlineKeyboardButton()
         row = mutableListOf()
-        button.text = "ENG \uD83C\uDDFA\uD83C\uDDF8";
+        button.text = "ENG \uD83C\uDDFA\uD83C\uDDF8"
         button.callbackData = "ENG"
         row.add(button)
         rows.add(row)
 
         inlineKeyboardMarkup.keyboard = rows
-        sendMessage.text = "\uD83C\uDDFA\uD83C\uDDFFAssalomu alaykum $name!\n" +
+        var text = "\uD83C\uDDFA\uD83C\uDDFFAssalomu alaykum $name!\n" +
                 "Botga xush kelibsiz. Iltimos tilni tanlang"
+        if (user.botState == BotState.CHANGE_LANG) {
+            text = when (user.languages[0].name) {
+                LanguageName.UZ -> {
+                    "Til tanlang"
+                }
+
+                LanguageName.RU -> {
+                    "Выберите язык"
+                }
+
+                LanguageName.ENG -> {
+                    "Choose a language"
+                }
+            }
+        }
+        sendMessage.text = text
         sendMessage.chatId = user.chatId
         sendMessage.replyMarkup = inlineKeyboardMarkup
         execute(sendMessage)
 
-        user.botState = BotState.CHOOSE_LANG
-        userService.update(user)
+        if (user.botState == BotState.START) {
+            user.botState = BotState.CHOOSE_LANG
+            userService.update(user)
+        }
     }
 
-    private fun sendNotification(chatId: String?, responseText: String) {
-
-        val sendMessage = SendMessage()
-        val rows: MutableList<KeyboardRow> = mutableListOf()
-
-        val row1 = KeyboardRow()
-
-        val ruButton = KeyboardButton("Ru \uD83C\uDDF7\uD83C\uDDFA")
-        val engButton = KeyboardButton("Eng \uD83C\uDDFA\uD83C\uDDF8")
-        val uzButton = KeyboardButton("Uz \uD83C\uDDFA\uD83C\uDDFF")
-        row1.add(uzButton)
-        row1.add(ruButton)
-        row1.add(engButton)
-        rows.add(row1)
-
-        sendMessage.text = responseText
-        sendMessage.chatId = chatId.toString()
-
-        val markup = ReplyKeyboardMarkup()
-        markup.resizeKeyboard = true
-        markup.keyboard = rows
-        sendMessage.replyMarkup = markup
-        execute(sendMessage)
-
-    }
-
-    public fun sendText(user: User, text: String) {
+    fun sendText(user: User, text: String) {
         val sendMessage = SendMessage()
         sendMessage.text = text
         sendMessage.chatId = user.chatId
         execute(sendMessage)
     }
-
 
     fun userMenu(user: User) {
         val userLang = user.languages[0].name

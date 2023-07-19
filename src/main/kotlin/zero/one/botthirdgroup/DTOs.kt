@@ -31,7 +31,12 @@ data class GetUserDTO(
 ) {
     companion object {
         fun toDTO(user: User): GetUserDTO {
-            return user.run { GetUserDTO(id!!, name!!, phoneNumber!!, role!!, languages, botState) }
+            return user.run { GetUserDTO(id!!, name!!, phoneNumber!!, role, languages, botState) }
         }
     }
 }
+
+data class LanguageUpdateDTO(
+    val phoneNumber: String,
+    val languages: List<Long>
+)

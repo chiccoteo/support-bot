@@ -21,7 +21,7 @@ class User(
     @Enumerated(EnumType.STRING) var botState: BotState = BotState.START
 ) : BaseEntity() {
     constructor(chatId: String, languages: MutableList<Language>) : this(
-        null, null, chatId, 0.0, Role.USER, languages
+        null, null, chatId, 5.0, Role.USER, languages
     )
 
 }
