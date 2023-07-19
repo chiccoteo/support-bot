@@ -146,6 +146,7 @@ class MessageServiceImpl(
                                 telegramMessageId,
                                 replyTelegramMessageId,
                                 time,
+                                sessionRepo.findByStatusTrueAndUser(senderUser) ?:
                                 sessionRepo.save(Session(true, senderUser.languages[0], time, senderUser, null)),
                                 senderUser,
                                 attachment,
