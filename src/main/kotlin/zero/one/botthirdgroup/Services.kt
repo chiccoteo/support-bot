@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import zero.one.botthirdgroup.MessageDTO.Companion.toDTO
+import java.util.LinkedList
 
 interface UserService {
     fun createOrTgUser(chatId: String): User
@@ -30,16 +31,25 @@ interface MessageService {
     fun closingSession(operatorChatId: String)
 
 }
-interface SessionService{
+
+interface SessionService {
     fun getOperatorAvgRate(): List<GetOperatorAvgRateDTO>
 
 }
+
 @Service
 class SessionServiceImpl(
-    private val sessionRepo: SessionRepository
-):SessionService {
+    private val sessionRepo: SessionRepository,
+    private val userRepository: UserRepository
+) : SessionService {
     override fun getOperatorAvgRate(): List<GetOperatorAvgRateDTO> {
-        return sessionRepo.getOperatorAvgRate()
+        val list = sessionRepo.getOperatorAvgRate()
+        var response = LinkedList<GetOperatorAvgRateDTO>()
+        for (operatorAvgRateMapper in list) {
+            val operator = userRepository.findByIdAndDeletedFalse(operatorAvgRateMapper.getOperatorId())
+            response.add(GetOperatorAvgRateDTO(operator!!, operatorAvgRateMapper.getAvgRate()))
+        }
+        return response
     }
 }
 
@@ -159,7 +169,16 @@ class MessageServiceImpl(
                                     telegramMessageId,
                                     replyTelegramMessageId,
                                     time,
-                                    sessionRepo.save(Session(true, senderUser.languages[0], time, 0.0, senderUser, it[0])),
+                                    sessionRepo.save(
+                                        Session(
+                                            true,
+                                            senderUser.languages[0],
+                                            time,
+                                            0.0,
+                                            senderUser,
+                                            it[0]
+                                        )
+                                    ),
                                     senderUser,
                                     attachment,
                                     messageType,

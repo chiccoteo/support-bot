@@ -54,8 +54,8 @@ interface LanguageRepository : BaseRepository<Language> {
 }
 
 interface SessionRepository : BaseRepository<Session> {
-    @Query("select operator_id,avg(rate) from Session group by operator_id", nativeQuery = true)
-    fun getOperatorAvgRate():List<GetOperatorAvgRateDTO>
+    @Query(value = "select operator_id as operatorId,avg(rate) as avgRate from Session group by operator_id", nativeQuery = true)
+    fun getOperatorAvgRate(): List<OperatorAvgRateMapper>
     fun findByStatusTrueAndOperator(operator: User): Session?
     fun findByStatusTrueAndUser(user: User): Session?
     fun findAllByStatusTrueAndSessionLanguageInAndOperatorIsNullOrderByTime(operatorLanguages: MutableList<Language>?): List<Session?>

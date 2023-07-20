@@ -479,7 +479,11 @@ class TelegramBot(
 
     private fun getContact(tgUser: User, contact: Contact) {
         val phoneNumber = contact.phoneNumber
-        tgUser.name = contact.firstName + " " + contact.lastName
+//        tgUser.name = contact.firstName + " " + contact.lastName
+        contact.run {
+            firstName?.let { tgUser.name += firstName }
+            lastName?.let { tgUser.name += lastName }
+        }
         tgUser.phoneNumber = phoneNumber
         tgUser.botState = BotState.USER_MENU
         userService.update(tgUser)

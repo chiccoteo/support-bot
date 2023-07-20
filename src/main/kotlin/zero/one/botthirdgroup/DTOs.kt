@@ -43,6 +43,6 @@ data class LanguageUpdateDTO(
 )
 
 data class GetOperatorAvgRateDTO(
-    val operatorId: Long,
+    val operator: User,
     val avgRate: Double
 )
