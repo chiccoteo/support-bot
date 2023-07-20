@@ -25,7 +25,7 @@ interface MessageService {
 
     fun getOperatorFromSession(userChatId: String): String
 
-    fun ratingOperator(operatorChatId: String, rate: Double)
+//    fun ratingOperator(operatorChatId: String, rate: Double)
 
     fun closingSession(operatorChatId: String)
 
@@ -110,6 +110,7 @@ class MessageServiceImpl(
                                     session,
                                     senderUser,
                                     attachment,
+                                    messageType,
                                     text
                                 )
                             ), session.user.chatId, attachment
@@ -127,6 +128,7 @@ class MessageServiceImpl(
                                     session,
                                     senderUser,
                                     attachment,
+                                    messageType,
                                     text
                                 )
                             ), session.operator?.chatId, attachment
@@ -144,9 +146,10 @@ class MessageServiceImpl(
                                     telegramMessageId,
                                     replyTelegramMessageId,
                                     time,
-                                    sessionRepo.save(Session(true, senderUser.languages[0], time, senderUser, it[0])),
+                                    sessionRepo.save(Session(true, senderUser.languages[0], time, 0.0, senderUser, it[0])),
                                     senderUser,
                                     attachment,
+                                    messageType,
                                     text
                                 )
                             ), it[0]?.chatId, attachment
@@ -163,12 +166,14 @@ class MessageServiceImpl(
                                         true,
                                         senderUser.languages[0],
                                         time,
+                                        0.0,
                                         senderUser,
                                         null
                                     )
                                 ),
                                 senderUser,
                                 attachment,
+                                messageType,
                                 text
                             )
                         )
@@ -224,12 +229,12 @@ class MessageServiceImpl(
         return operatorChatId
     }
 
-    override fun ratingOperator(operatorChatId: String, rate: Double) {
-        userRepo.findByChatIdAndDeletedFalse(operatorChatId)?.let {
-            it.rate = (it.rate + rate) / 2
-            userRepo.save(it)
-        }
-    }
+//    override fun ratingOperator(operatorChatId: String, rate: Double) {
+//        userRepo.findByChatIdAndDeletedFalse(operatorChatId)?.let {
+//            it.rate = (it.rate + rate) / 2
+//            userRepo.save(it)
+//        }
+//    }
 
     override fun closingSession(operatorChatId: String) {
         userRepo.findByChatIdAndDeletedFalse(operatorChatId)?.let {

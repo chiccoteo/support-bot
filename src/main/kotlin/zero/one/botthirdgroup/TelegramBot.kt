@@ -46,7 +46,7 @@ class TelegramBot(
 
     override fun onUpdateReceived(update: Update) {
 
-        val user = userService.createOrTgUser(getChatId(update))
+        val user = userService.createOrTgUser(update.getChatId())
 
         if (update.hasMessage()) {
             val message = update.message
@@ -55,13 +55,14 @@ class TelegramBot(
                 val text = message.text
 
                 if (text.equals("/start")) {
+
                     if (user.role == Role.OPERATOR) {
                         if (user.botState != BotState.SESSION)
                             onlineOfflineMenu(user, userLang)
                     } else {
                         if (user.botState == BotState.START) {
                             chooseLanguage(user, message.from.firstName)
-                        } else if (user.phoneNumber == null) {
+                        } else if (user.botState == BotState.SHARE_CONTACT) {
                             sendContactRequest(user, languageUtil.contactButtonTxt(userLang))
                         } else if (user.botState == BotState.USER_MENU) {
                             userMenu(user)
@@ -72,7 +73,7 @@ class TelegramBot(
                 if (user.botState == BotState.USER_MENU) {
                     if (text.equals("Savol so'rash❓") || text.equals("Задайте вопрос❓") || text.equals("Ask question❓")) {
                         val message1 = SendMessage()
-                        message1.chatId = getChatId(update)
+                        message1.chatId = update.getChatId()
                         message1.text = languageUtil.pleaseGiveQuestion(userLang)
                         val replyKeyboardRemove = ReplyKeyboardRemove(true)
                         message1.replyMarkup = replyKeyboardRemove
@@ -93,7 +94,8 @@ class TelegramBot(
                             message.messageId,
                             getReplyMessageTgId(message),
                             Timestamp(System.currentTimeMillis()),
-                            user.chatId, null, text, null
+                            user.chatId, null, text, null,
+                            MessageContentType.TEXT
                         )
                     )
                     if (create != null) {
@@ -224,8 +226,8 @@ class TelegramBot(
                     if (text.equals("Sessiyani yopish")) {
                         user.botState = BotState.ONLINE
                         userService.update(user)
-                        val userChatId = messageService.getUserFromSession(getChatId(update))
-                        messageService.closingSession(getChatId(update))
+                        val userChatId = messageService.getUserFromSession(update.getChatId())
+                        messageService.closingSession(update.getChatId())
                         onlineOfflineMenu(user, userLang)
                         userService.createOrTgUser(userChatId).run {
                             this.botState = BotState.RATING
@@ -241,7 +243,8 @@ class TelegramBot(
                                 user.chatId,
                                 null,
                                 text,
-                                null
+                                null,
+                                MessageContentType.TEXT
                             )
                         )
 
@@ -254,10 +257,16 @@ class TelegramBot(
 
             } else if (message.hasContact()) {
                 if (user.botState == BotState.SHARE_CONTACT) {
-                    getContact(user, message.contact)
+                    val contact = message.contact
+                    println("" + contact.userId + "," + message.from.id)
+                    if (message.from.id == contact.userId) {
+                        getContact(user, contact)
+                    } else {
+                        sendText(user, "Iltimos share contact")
+                    }
                 }
             } else if (message.hasPhoto()) {
-                val photo = message.photo.last()
+                val photo = message.photo.first()
                 val create = create(photo.fileId, "asd.png", AttachmentContentType.PHOTO)
                 val messageDTO = messageService.create(
                     MessageDTO(
@@ -267,7 +276,8 @@ class TelegramBot(
                         user.chatId,
                         null,
                         message.caption,
-                        create
+                        create,
+                        MessageContentType.PHOTO
                     )
                 )
                 messageDTO?.let {
@@ -289,7 +299,8 @@ class TelegramBot(
                         user.chatId,
                         null,
                         null,
-                        attachment
+                        attachment,
+                        MessageContentType.DOCUMENT
                     )
                 )
                 messageDTO?.let {
@@ -315,7 +326,8 @@ class TelegramBot(
                         user.chatId,
                         null,
                         null,
-                        attachment
+                        attachment,
+                        MessageContentType.VIDEO
                     )
                 )
                 messageDTO?.let {
@@ -337,7 +349,8 @@ class TelegramBot(
                         user.chatId,
                         null,
                         null,
-                        attachment
+                        attachment,
+                        MessageContentType.AUDIO
                     )
                 )
                 messageDTO?.let {
@@ -351,7 +364,7 @@ class TelegramBot(
 
             } else if (message.hasVoice()) {
                 val voice = message.voice
-                val create = create(voice.fileId, "asd.ogg", AttachmentContentType.VOICE)
+                val attachment = create(voice.fileId, "asd.ogg", AttachmentContentType.VOICE)
                 val messageDTO = messageService.create(
                     MessageDTO(
                         message.messageId,
@@ -360,7 +373,8 @@ class TelegramBot(
                         user.chatId,
                         null,
                         null,
-                        create
+                        attachment,
+                        MessageContentType.VOICE
                     )
                 )
                 messageDTO?.let {
@@ -382,7 +396,8 @@ class TelegramBot(
                         user.chatId,
                         null,
                         null,
-                        attachment
+                        attachment,
+                        MessageContentType.VIDEO_NOTE
                     )
                 )
                 messageDTO?.let {
@@ -396,7 +411,11 @@ class TelegramBot(
             }
         } else if (update.hasCallbackQuery()) {
             val data = update.callbackQuery.data
-            if (user.botState == BotState.CHOOSE_LANG || user.botState == BotState.CHANGE_LANG) {
+            if (user.botState == BotState.START || user.botState == BotState.CHANGE_LANG) {
+                if (user.botState == BotState.START) {
+                    user.botState = BotState.CHOOSE_LANG
+                    userService.update(user)
+                }
                 when (data) {
                     "UZ" -> {
                         user.languages = mutableListOf(languageRepository.findByName(LanguageName.UZ))
@@ -436,14 +455,11 @@ class TelegramBot(
                                 languageUtil.contactButtonTxt(LanguageName.ENG)
                             )
                     }
-                }
-                if (user.botState != BotState.USER_MENU) {
-                    user.botState = BotState.SHARE_CONTACT
-                    userService.update(user)
+
                 }
             }
             if (user.botState == BotState.RATING) {
-                messageService.ratingOperator(data.substring(1), data.substring(0, 1).toDouble())
+//                messageService.ratingOperator(data.substring(1), data.substring(0, 1).toDouble())
                 user.botState = BotState.USER_MENU
                 userService.update(user)
                 userMenu(user)
@@ -460,15 +476,6 @@ class TelegramBot(
             message.replyToMessage.messageId
         else
             null
-    }
-
-    private fun getChatId(update: Update): String {
-        return if (update.hasMessage())
-            update.message.chatId.toString()
-        else if (update.hasCallbackQuery())
-            update.callbackQuery.message.chatId.toString()
-        else
-            ""
     }
 
     private fun getContact(tgUser: User, contact: Contact) {
@@ -626,6 +633,8 @@ class TelegramBot(
         markup.keyboard = rows
         sendMessage.replyMarkup = markup
         execute(sendMessage)
+        user.botState = BotState.SHARE_CONTACT
+        userService.update(user)
     }
 
     private fun chooseLanguage(user: User, name: String) {
@@ -678,11 +687,6 @@ class TelegramBot(
         sendMessage.chatId = user.chatId
         sendMessage.replyMarkup = inlineKeyboardMarkup
         execute(sendMessage)
-
-        if (user.botState == BotState.START) {
-            user.botState = BotState.CHOOSE_LANG
-            userService.update(user)
-        }
     }
 
     fun sendText(user: User, text: String) {
