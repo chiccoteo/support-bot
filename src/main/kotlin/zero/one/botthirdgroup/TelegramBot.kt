@@ -74,7 +74,8 @@ class TelegramBot(
                             }
 
                             BotState.RATING -> {
-                                rateOperator(messageService.getSessionByUser(update.getChatId())!!)
+                                rateOperator(messageService.isThereNotRatedSession(update.getChatId()))
+                                messageService.closingSession(update.getChatId())
                             }
 
                             else -> {}
@@ -83,7 +84,8 @@ class TelegramBot(
                 }
 
                 if (user.botState == BotState.RATING) {
-                    rateOperator(messageService.getSessionByUser(update.getChatId())!!)
+                    rateOperator(messageService.isThereNotRatedSession(update.getChatId()))
+                    messageService.closingSession(update.getChatId())
                 }
 
                 if (user.botState == BotState.USER_MENU) {
@@ -139,8 +141,10 @@ class TelegramBot(
                         "ONLINE" -> {
                             user.botState = BotState.ONLINE
                             userService.update(user)
-                            val waitedMessages = messageService.getWaitedMessages(user.chatId)
-                            waitedMessages?.let {
+                            messageService.getWaitedMessages(user.chatId)?.let {
+                                executeWaitedMessages(it, user)
+                            }
+                            /*waitedMessages?.let {
                                 // session open now
                                 user.botState = BotState.SESSION
                                 userService.update(user)
@@ -223,12 +227,9 @@ class TelegramBot(
                                                 }
                                             }
                                         }
-
-
                                     }
-
                                 }
-                            }
+                            }*/
                             if (user.botState != BotState.SESSION)
                                 onlineOfflineMenu(user, userLang)
                         }
@@ -246,18 +247,31 @@ class TelegramBot(
                 if (user.botState == BotState.SESSION) {
                     if (text.equals("CLOSE") || text.equals("CLOSE AND OFF")) {
                         if (text.equals("CLOSE")) {
+                            val session = messageService.getSessionByOperator(update.getChatId())!!
+                            rateOperator(session)
+                            messageService.closingSession(update.getChatId())
                             user.botState = BotState.ONLINE
                             userService.update(user)
+                            userService.createOrTgUser(session.user.chatId).run {
+                                this.botState = BotState.RATING
+                                userService.update(this)
+                            }
+                            messageService.getWaitedMessages(user.chatId)?.let {
+                                executeWaitedMessages(it, user)
+                            }
                         } else {
                             user.botState = BotState.OFFLINE
                             userService.update(user)
+                            val session = messageService.getSessionByOperator(update.getChatId())!!
+                            rateOperator(session)
+                            messageService.closingSession(update.getChatId())
+                            userService.createOrTgUser(session.user.chatId).run {
+                                this.botState = BotState.RATING
+                                userService.update(this)
+                            }
                         }
-                        onlineOfflineMenu(user, userLang)
-                        val session = messageService.getSessionByOperator(update.getChatId())!!
-                        rateOperator(session)
-                        userService.createOrTgUser(session.user.chatId).run {
-                            this.botState = BotState.RATING
-                            userService.update(this)
+                        if (user.botState != BotState.SESSION) {
+                            onlineOfflineMenu(user, userLang)
                         }
                     } else {
                         // ONLINE text not send
@@ -280,7 +294,6 @@ class TelegramBot(
                         }
                     }
                 }
-
             } else if (message.hasContact()) {
                 if (user.botState == BotState.SHARE_CONTACT) {
                     val contact = message.contact
@@ -290,6 +303,7 @@ class TelegramBot(
                     } else {
                         sendText(user, "Iltimos share contact")
                     }
+
                 }
             } else if (message.hasPhoto()) {
                 val photo = message.photo.first()
@@ -435,6 +449,7 @@ class TelegramBot(
                     )
                 }
             }
+
         } else if (update.hasCallbackQuery()) {
             val data = update.callbackQuery.data
             if (user.botState == BotState.START || user.botState == BotState.CHANGE_LANG) {
@@ -485,17 +500,102 @@ class TelegramBot(
                 }
             }
             if (user.botState == BotState.RATING) {
-                messageService.closingSession(update.getChatId())
                 messageService.ratingOperator(data.substring(1).toLong(), data.substring(0, 1).toByte())
                 user.botState = BotState.USER_MENU
                 userService.update(user)
                 userMenu(user)
             }
-            if (user.botState == BotState.SESSION) {
-                // close and closeOff
-            }
         }
 
+    }
+
+    private fun executeWaitedMessages(waitedMessages: List<MessageDTO>, user: User) {
+        waitedMessages.let {
+            // session open now
+            user.botState = BotState.SESSION
+            userService.update(user)
+            val sender = userService.createOrTgUser(waitedMessages[0].senderChatId)
+            getCloseOrCloseAndOff(user).let { connectingMessage ->
+                connectingMessage.text =
+                    "Siz " + sender.name + " bilan bog'landingiz"
+                execute(connectingMessage)
+                sendText(sender, "Siz " + user.name + " bilan bog'landingiz")
+            }
+            for (waitedMessage in it) {
+                if (waitedMessage.attachment == null) {
+                    waitedMessage.run {
+                        this.text?.let { text ->
+                            sendText(
+                                userService.createOrTgUser(this.toChatId.toString()),
+                                text
+                            )
+                        }
+                    }
+                } else {
+                    waitedMessage.attachment.let { attachment ->
+                        when (attachment.contentType) {
+                            AttachmentContentType.PHOTO -> {
+                                execute(
+                                    SendPhoto(
+                                        waitedMessage.toChatId.toString(),
+                                        InputFile(File(attachment.pathName))
+                                    )
+                                )
+                            }
+
+                            AttachmentContentType.DOCUMENT -> {
+                                execute(
+                                    SendDocument(
+                                        waitedMessage.toChatId.toString(),
+                                        InputFile(File(attachment.pathName))
+                                    )
+                                )
+                            }
+
+                            AttachmentContentType.VIDEO -> {
+                                execute(
+                                    SendVideo(
+                                        waitedMessage.toChatId.toString(),
+                                        InputFile(File(attachment.pathName))
+                                    )
+                                )
+                            }
+
+                            AttachmentContentType.AUDIO -> {
+                                execute(
+                                    SendAudio(
+                                        waitedMessage.toChatId.toString(),
+                                        InputFile(File(attachment.pathName))
+                                    )
+                                )
+                            }
+
+                            AttachmentContentType.VIDEO_NOTE -> {
+                                execute(
+                                    SendVideoNote(
+                                        waitedMessage.toChatId.toString(),
+                                        InputFile(File(attachment.pathName))
+                                    )
+                                )
+                            }
+
+                            AttachmentContentType.VOICE -> {
+                                execute(
+                                    SendVoice(
+                                        waitedMessage.toChatId.toString(),
+                                        InputFile(File(attachment.pathName))
+                                    )
+                                )
+                            }
+
+                            AttachmentContentType.STICKER -> {
+
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun getReplyMessageTgId(message: Message): Int? {
@@ -587,30 +687,6 @@ class TelegramBot(
 
         sendMessage.text = languageUtil.chooseMenuTextReq(userLang)
         sendMessage.chatId = user.chatId
-
-        val markup = ReplyKeyboardMarkup()
-        markup.resizeKeyboard = true
-        markup.keyboard = rows
-        sendMessage.replyMarkup = markup
-        execute(sendMessage)
-    }
-
-    private fun closeOrCloseAndOff(user: User, userLang: LanguageName, text: String) {
-        val sendMessage = SendMessage()
-        val rows: MutableList<KeyboardRow> = mutableListOf()
-
-        val row1 = KeyboardRow()
-
-        val closeButton = KeyboardButton("CLOSE")
-        val closeAndOffButton = KeyboardButton("CLOSE AND OFF")
-
-        row1.add(closeButton)
-        row1.add(closeAndOffButton)
-        rows.add(row1)
-
-        sendMessage.text = text
-        sendMessage.chatId = user.chatId
-
 
         val markup = ReplyKeyboardMarkup()
         markup.resizeKeyboard = true
