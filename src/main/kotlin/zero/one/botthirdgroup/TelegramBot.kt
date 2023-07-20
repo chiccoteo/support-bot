@@ -324,6 +324,7 @@ class TelegramBot(
                     MessageDTO(
                         message.messageId,
                         null,
+                        null,
                         Timestamp(System.currentTimeMillis()),
                         user.chatId,
                         null,
