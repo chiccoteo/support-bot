@@ -25,7 +25,18 @@ enum class BotState {
     CHANGE_LANG
 }
 
-enum class AttachmentContentType{
+enum class AttachmentContentType {
+    DOCUMENT,
+    PHOTO,
+    STICKER,
+    AUDIO,
+    VIDEO,
+    VOICE,
+    VIDEO_NOTE
+}
+
+enum class MessageContentType {
+    TEXT,
     DOCUMENT,
     PHOTO,
     STICKER,
