@@ -1,5 +1,6 @@
 package zero.one.botthirdgroup
 
+import org.apache.logging.log4j.message.TimestampMessage
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
@@ -195,10 +196,6 @@ class TelegramBot(
                                 for (waitedMessage in it) {
 
 
-
-
-
-
                                     if (waitedMessage.attachment == null) {
                                         waitedMessage.run {
                                             this.text?.let { text ->
@@ -266,7 +263,12 @@ class TelegramBot(
                                                 }
 
                                                 AttachmentContentType.STICKER -> {
-
+                                                    execute(
+                                                        SendSticker(
+                                                            waitedMessage.toChatId.toString(),
+                                                            InputFile(File(attachment.pathName))
+                                                        )
+                                                    )
                                                 }
                                             }
                                         }
@@ -392,13 +394,33 @@ class TelegramBot(
 
                 var stickerType = "";
 
-                stickerType = if (sticker.isAnimated) "TGS"
+                stickerType = if (sticker.isAnimated) "apng"
                 else "webp"
+
 
                 val attachment = create(sticker.fileId, "sticker.$stickerType", AttachmentContentType.STICKER)
 
-                execute(SendSticker(user.chatId, InputFile(File(attachment.pathName))))
+                val messageDTO = messageService.create(
+                    MessageDTO(
+                        message.messageId,
+                        null,
+                        Timestamp(System.currentTimeMillis()),
+                        user.chatId,
+                        null,
+                        null,
+                        attachment,
+                        MessageContentType.STICKER
+                    )
+                )
 
+                messageDTO?.let {
+                    execute(
+                        SendSticker(
+                            it.toChatId.toString(),
+                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
+                        )
+                    )
+                }
 
             } else if (message.hasVideo()) {
                 val video = message.video
