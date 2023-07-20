@@ -57,12 +57,15 @@ interface SessionRepository : BaseRepository<Session> {
     @Query(value = "select operator_id as operatorId,avg(rate) as avgRate from Session group by operator_id", nativeQuery = true)
     fun getOperatorAvgRate(): List<OperatorAvgRateMapper>
     fun findByStatusTrueAndOperator(operator: User): Session?
+    fun findByStatusTrueAndOperatorChatId(operatorChatId: String): Session?
+    fun findByStatusTrueAndUserChatId(userChatId: String): Session?
     fun findByStatusTrueAndUser(user: User): Session?
     fun findAllByStatusTrueAndSessionLanguageInAndOperatorIsNullOrderByTime(operatorLanguages: MutableList<Language>?): List<Session?>
 }
 
 interface MessageRepository : BaseRepository<Message> {
     fun findAllBySessionAndDeletedFalseOrderByTime(session: Session): List<Message>
+    fun findAllBySessionAndDeletedFalse(session: Session): List<Message>
 }
 
 interface AttachmentRepository : BaseRepository<Attachment>

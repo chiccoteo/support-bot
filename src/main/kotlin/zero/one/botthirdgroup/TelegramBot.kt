@@ -60,14 +60,30 @@ class TelegramBot(
                         if (user.botState != BotState.SESSION)
                             onlineOfflineMenu(user, userLang)
                     } else {
-                        if (user.botState == BotState.START) {
-                            chooseLanguage(user, message.from.firstName)
-                        } else if (user.botState == BotState.SHARE_CONTACT) {
-                            sendContactRequest(user, languageUtil.contactButtonTxt(userLang))
-                        } else if (user.botState == BotState.USER_MENU) {
-                            userMenu(user)
+                        when (user.botState) {
+                            BotState.START -> {
+                                chooseLanguage(user, message.from.firstName)
+                            }
+
+                            BotState.SHARE_CONTACT -> {
+                                sendContactRequest(user, languageUtil.contactButtonTxt(userLang))
+                            }
+
+                            BotState.USER_MENU -> {
+                                userMenu(user)
+                            }
+
+                            BotState.RATING -> {
+                                rateOperator(messageService.getSessionByUser(update.getChatId())!!)
+                            }
+
+                            else -> {}
                         }
                     }
+                }
+
+                if (user.botState == BotState.RATING) {
+                    rateOperator(messageService.getSessionByUser(update.getChatId())!!)
                 }
 
                 if (user.botState == BotState.USER_MENU) {
@@ -100,20 +116,18 @@ class TelegramBot(
                     )
                     if (create != null) {
                         val tgUser = userService.createOrTgUser(create.toChatId.toString())
+                        if (messageService.isThereOneMessageInSession(update.getChatId())) {
+                            val connectingMessage: SendMessage
+                            getCloseOrCloseAndOff(tgUser).let {
+                                it.text = "Siz " + user.name + " bilan bog'landingiz"
+                                connectingMessage = it
+                            }
+                            execute(connectingMessage)
+                            sendText(user, "Siz " + tgUser.name + " bilan bog'landingiz")
+                        }
                         val sendMessage = SendMessage()
                         sendMessage.text = create.text.toString()
                         sendMessage.chatId = tgUser.chatId
-                        if (tgUser.botState == BotState.ONLINE) {
-                            val rows: MutableList<KeyboardRow> = mutableListOf()
-                            val row1 = KeyboardRow()
-                            val button = KeyboardButton(languageUtil.closeSessionBtnTxt(userLang))
-                            row1.add(button)
-                            rows.add(row1)
-                            val markup = ReplyKeyboardMarkup()
-                            markup.resizeKeyboard = true
-                            markup.keyboard = rows
-                            sendMessage.replyMarkup = markup
-                        }
                         execute(sendMessage)
                         tgUser.botState = BotState.SESSION
                         userService.update(tgUser)
@@ -127,9 +141,16 @@ class TelegramBot(
                             userService.update(user)
                             val waitedMessages = messageService.getWaitedMessages(user.chatId)
                             waitedMessages?.let {
+                                // session open now
                                 user.botState = BotState.SESSION
                                 userService.update(user)
-                                closeSession(user, userLang)
+                                val sender = userService.createOrTgUser(waitedMessages[0].senderChatId)
+                                getCloseOrCloseAndOff(user).let { connectingMessage ->
+                                    connectingMessage.text =
+                                        "Siz " + sender.name + " bilan bog'landingiz"
+                                    execute(connectingMessage)
+                                    sendText(sender, "Siz " + user.name + " bilan bog'landingiz")
+                                }
                                 for (waitedMessage in it) {
                                     if (waitedMessage.attachment == null) {
                                         waitedMessage.run {
@@ -223,18 +244,23 @@ class TelegramBot(
 
                 // Sending messages for Operator
                 if (user.botState == BotState.SESSION) {
-                    if (text.equals("Sessiyani yopish")) {
-                        user.botState = BotState.ONLINE
-                        userService.update(user)
-                        val userChatId = messageService.getUserFromSession(update.getChatId())
-                        messageService.closingSession(update.getChatId())
+                    if (text.equals("CLOSE") || text.equals("CLOSE AND OFF")) {
+                        if (text.equals("CLOSE")) {
+                            user.botState = BotState.ONLINE
+                            userService.update(user)
+                        } else {
+                            user.botState = BotState.OFFLINE
+                            userService.update(user)
+                        }
                         onlineOfflineMenu(user, userLang)
-                        userService.createOrTgUser(userChatId).run {
+                        val session = messageService.getSessionByOperator(update.getChatId())!!
+                        rateOperator(session)
+                        userService.createOrTgUser(session.user.chatId).run {
                             this.botState = BotState.RATING
                             userService.update(this)
                         }
-                        rateOperator(user, userLang, userChatId)
                     } else {
+                        // ONLINE text not send
                         val create = messageService.create(
                             MessageDTO(
                                 message.messageId,
@@ -459,7 +485,8 @@ class TelegramBot(
                 }
             }
             if (user.botState == BotState.RATING) {
-//                messageService.ratingOperator(data.substring(1), data.substring(0, 1).toDouble())
+                messageService.closingSession(update.getChatId())
+                messageService.ratingOperator(data.substring(1).toLong(), data.substring(0, 1).toByte())
                 user.botState = BotState.USER_MENU
                 userService.update(user)
                 userMenu(user)
@@ -490,42 +517,42 @@ class TelegramBot(
         userMenu(tgUser)
     }
 
-    private fun rateOperator(operator: User, userLang: LanguageName, userChatId: String) {
+    private fun rateOperator(session: Session) {
         val inlineKeyboardMarkup = InlineKeyboardMarkup()
         val rows: MutableList<MutableList<InlineKeyboardButton>> = mutableListOf()
         var row: MutableList<InlineKeyboardButton> = mutableListOf()
         var button = InlineKeyboardButton()
 
         button.text = "1"
-        button.callbackData = "1" + operator.chatId
+        button.callbackData = "1" + session.id
         row.add(button)
         rows.add(row)
 
         row = mutableListOf()
         button = InlineKeyboardButton()
         button.text = "2"
-        button.callbackData = "2" + operator.chatId
+        button.callbackData = "2" + session.id
         row.add(button)
         rows.add(row)
 
         row = mutableListOf()
         button = InlineKeyboardButton()
         button.text = "3"
-        button.callbackData = "3" + operator.chatId
+        button.callbackData = "3" + session.id
         row.add(button)
         rows.add(row)
 
         row = mutableListOf()
         button = InlineKeyboardButton()
         button.text = "4"
-        button.callbackData = "4" + operator.chatId
+        button.callbackData = "4" + session.id
         row.add(button)
         rows.add(row)
 
         row = mutableListOf()
         button = InlineKeyboardButton()
         button.text = "5"
-        button.callbackData = "5" + operator.chatId
+        button.callbackData = "5" + session.id
         row.add(button)
         rows.add(row)
 
@@ -533,31 +560,15 @@ class TelegramBot(
 
         val sendMessage = SendMessage()
         var text = ""
-        if (userLang == LanguageName.UZ)
+        if (session.sessionLanguage.name == LanguageName.UZ)
             text = "Operatorni baholang 😀"
-        if (userLang == LanguageName.ENG)
+        if (session.sessionLanguage.name == LanguageName.ENG)
             text = "Rate the operator 😀"
-        if (userLang == LanguageName.RU)
+        if (session.sessionLanguage.name == LanguageName.RU)
             text = "Оцените оператора 😀"
         sendMessage.text = text
-        sendMessage.chatId = userChatId
+        sendMessage.chatId = session.user.chatId
         sendMessage.replyMarkup = inlineKeyboardMarkup
-        execute(sendMessage)
-    }
-
-    private fun closeSession(user: User, userLang: LanguageName) {
-        val sendMessage = SendMessage()
-        val rows: MutableList<KeyboardRow> = mutableListOf()
-        val row1 = KeyboardRow()
-        val button = KeyboardButton(languageUtil.closeSessionBtnTxt(userLang))
-        row1.add(button)
-        rows.add(row1)
-        sendMessage.text = "Siz sessiyaga bog'landingiz"
-        sendMessage.chatId = user.chatId
-        val markup = ReplyKeyboardMarkup()
-        markup.resizeKeyboard = true
-        markup.keyboard = rows
-        sendMessage.replyMarkup = markup
         execute(sendMessage)
     }
 
@@ -575,15 +586,10 @@ class TelegramBot(
             row1.add(onButton)
         if (user.botState == BotState.ONLINE)
             row1.add(offButton)
-        if (user.botState == BotState.SESSION) {
-            row1.add(onButton)
-            row1.add(offButton)
-        }
         rows.add(row1)
 
         sendMessage.text = languageUtil.chooseMenuTextReq(userLang)
         sendMessage.chatId = user.chatId
-
 
         val markup = ReplyKeyboardMarkup()
         markup.resizeKeyboard = true
@@ -592,7 +598,7 @@ class TelegramBot(
         execute(sendMessage)
     }
 
-    private fun closeOrCloseAndOff(user: User, userLang: LanguageName) {
+    private fun closeOrCloseAndOff(user: User, userLang: LanguageName, text: String) {
         val sendMessage = SendMessage()
         val rows: MutableList<KeyboardRow> = mutableListOf()
 
@@ -605,7 +611,7 @@ class TelegramBot(
         row1.add(closeAndOffButton)
         rows.add(row1)
 
-        sendMessage.text = languageUtil.chooseMenuTextReq(userLang)
+        sendMessage.text = text
         sendMessage.chatId = user.chatId
 
 
@@ -614,6 +620,30 @@ class TelegramBot(
         markup.keyboard = rows
         sendMessage.replyMarkup = markup
         execute(sendMessage)
+    }
+
+    private fun getCloseOrCloseAndOff(user: User): SendMessage {
+        val sendMessage = SendMessage()
+        val rows: MutableList<KeyboardRow> = mutableListOf()
+
+        val row1 = KeyboardRow()
+
+        val closeButton = KeyboardButton("CLOSE")
+        val closeAndOffButton = KeyboardButton("CLOSE AND OFF")
+
+        row1.add(closeButton)
+        row1.add(closeAndOffButton)
+        rows.add(row1)
+
+        sendMessage.text = ""
+        sendMessage.chatId = user.chatId
+
+
+        val markup = ReplyKeyboardMarkup()
+        markup.resizeKeyboard = true
+        markup.keyboard = rows
+        sendMessage.replyMarkup = markup
+        return sendMessage
     }
 
     private fun sendContactRequest(user: User, contactButtonTxt: String) {
