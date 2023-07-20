@@ -31,7 +31,7 @@ class TelegramBot(
     private val languageUtil: LanguageUtil,
     private val languageRepository: LanguageRepository,
     private val messageService: MessageService,
-    private val attachmentRepo: AttachmentRepository,
+    private val attachmentRepo: AttachmentRepository
 ) : TelegramLongPollingBot() {
 
     @Value("\${telegram.bot.username}")
@@ -524,10 +524,25 @@ class TelegramBot(
             userService.update(user)
             val sender = userService.createOrTgUser(waitedMessages[0].senderChatId)
             getCloseOrCloseAndOff(user).let { connectingMessage ->
-                connectingMessage.text =
-                    "Siz " + sender.name + " bilan bog'landingiz"
-                execute(connectingMessage)
-                sendText(sender, "Siz " + user.name + " bilan bog'landingiz")
+                when {
+                    user.languages[0].name == LanguageName.ENG -> {
+                        connectingMessage.text = "You have contacted the " + sender.name
+                        execute(connectingMessage)
+                        sendText(sender, "You have contacted the " + user.name)
+                    }
+
+                    user.languages[0].name == LanguageName.RU -> {
+                        connectingMessage.text = "вы связались с " + sender.name
+                        execute(connectingMessage)
+                        sendText(sender, "вы связались с " + user.name)
+                    }
+
+                    else -> {
+                        connectingMessage.text = "Siz " + sender.name + " bilan bog'landingiz"
+                        execute(connectingMessage)
+                        sendText(sender, "Siz " + user.name + " bilan bog'landingiz")
+                    }
+                }
             }
             for (waitedMessage in it) {
                 if (waitedMessage.attachment == null) {
