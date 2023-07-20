@@ -25,9 +25,15 @@ interface MessageService {
 
     fun getOperatorFromSession(userChatId: String): String
 
-//    fun ratingOperator(operatorChatId: String, rate: Double)
+    fun ratingOperator(sessionId: Long, rate: Byte)
 
-    fun closingSession(operatorChatId: String)
+    fun closingSession(userChatId: String)
+
+    fun getSessionByOperator(operatorChatId: String): Session?
+
+    fun getSessionByUser(userChatId: String): Session?
+
+    fun isThereOneMessageInSession(userChatId: String): Boolean
 
 }
 
@@ -146,7 +152,16 @@ class MessageServiceImpl(
                                     telegramMessageId,
                                     replyTelegramMessageId,
                                     time,
-                                    sessionRepo.save(Session(true, senderUser.languages[0], time, 0.0, senderUser, it[0])),
+                                    sessionRepo.save(
+                                        Session(
+                                            true,
+                                            senderUser.languages[0],
+                                            time,
+                                            0,
+                                            senderUser,
+                                            it[0]
+                                        )
+                                    ),
                                     senderUser,
                                     attachment,
                                     messageType,
@@ -166,7 +181,7 @@ class MessageServiceImpl(
                                         true,
                                         senderUser.languages[0],
                                         time,
-                                        0.0,
+                                        0,
                                         senderUser,
                                         null
                                     )
@@ -229,20 +244,36 @@ class MessageServiceImpl(
         return operatorChatId
     }
 
-//    override fun ratingOperator(operatorChatId: String, rate: Double) {
-//        userRepo.findByChatIdAndDeletedFalse(operatorChatId)?.let {
-//            it.rate = (it.rate + rate) / 2
-//            userRepo.save(it)
-//        }
-//    }
+    override fun ratingOperator(sessionId: Long, rate: Byte) {
+        sessionRepo.findByIdAndDeletedFalse(sessionId)?.run {
+            this.rate = rate
+            sessionRepo.save(this)
+        }
+    }
 
-    override fun closingSession(operatorChatId: String) {
-        userRepo.findByChatIdAndDeletedFalse(operatorChatId)?.let {
-            sessionRepo.findByStatusTrueAndOperator(it)?.run {
+    override fun closingSession(userChatId: String) {
+        userRepo.findByChatIdAndDeletedFalse(userChatId)?.let {
+            sessionRepo.findByStatusTrueAndUser(it)?.run {
                 this.status = false
                 sessionRepo.save(this)
             }
         }
+    }
+
+    override fun getSessionByOperator(operatorChatId: String): Session? {
+        return sessionRepo.findByStatusTrueAndOperatorChatId(operatorChatId)!!
+    }
+
+    override fun getSessionByUser(userChatId: String): Session {
+        return sessionRepo.findByStatusTrueAndUserChatId(userChatId)!!
+    }
+
+    override fun isThereOneMessageInSession(userChatId: String): Boolean {
+        sessionRepo.findByStatusTrueAndUserChatId(userChatId)?.run {
+            if (messageRepo.findAllBySessionAndDeletedFalse(this).size == 1)
+                return true
+        }
+        return false
     }
 
 }
