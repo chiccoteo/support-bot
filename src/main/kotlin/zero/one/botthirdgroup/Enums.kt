@@ -45,3 +45,7 @@ enum class MessageContentType {
     VOICE,
     VIDEO_NOTE
 }
+
+enum class ErrorCode(val code: Int) {
+    USER_NOT_FOUND(100)
+}

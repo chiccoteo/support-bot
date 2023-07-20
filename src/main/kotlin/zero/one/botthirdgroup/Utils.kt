@@ -71,6 +71,14 @@ class LanguageUtil {
         }
     }
 
+    fun closeAndCloseOff(lang: LanguageName): String {
+        return when (lang) {
+            LanguageName.UZ -> "Sessiya ochildi"
+            LanguageName.RU -> "Сессия открыта"
+            LanguageName.ENG -> "Session opened"
+        }
+    }
+
     fun errorLang(lang: LanguageName): String {
         return when (lang) {
             LanguageName.UZ -> "Iltimos o'zbek tilida xabar yozing"

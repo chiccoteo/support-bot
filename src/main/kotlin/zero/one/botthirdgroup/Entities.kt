@@ -36,7 +36,7 @@ class Session(
     @ColumnDefault(value = "true") var status: Boolean,
     @ManyToOne var sessionLanguage: Language,
     var time: Timestamp,
-    var rate: Double,
+    var rate: Byte,
     @ManyToOne var user: User,
     @ManyToOne var operator: User?,
 ) : BaseEntity()

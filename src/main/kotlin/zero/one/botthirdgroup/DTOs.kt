@@ -2,6 +2,7 @@ package zero.one.botthirdgroup
 
 import java.sql.Timestamp
 
+data class BaseMessage(val code: Int, val message: String?)
 data class MessageDTO(
     val telegramMessageId: Int,
     val replyTelegramMessageId: Int?,
@@ -39,4 +40,9 @@ data class GetUserDTO(
 data class LanguageUpdateDTO(
     val phoneNumber: String,
     val languages: List<Long>
+)
+
+data class GetOperatorAvgRateDTO(
+    val operator: User,
+    val avgRate: Double
 )
