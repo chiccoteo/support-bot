@@ -18,7 +18,7 @@ class User(
     var chatId: String,
     @Enumerated(EnumType.STRING) var role: Role = Role.USER,
     @ManyToMany(fetch = FetchType.EAGER) var languages: MutableList<Language>,
-    @Enumerated(EnumType.STRING) var botState: BotState = BotState.START
+    @Enumerated(EnumType.STRING) var botState: BotState = BotState.START,
 ) : BaseEntity() {
     constructor(chatId: String, languages: MutableList<Language>) : this(
         null, null, null, chatId, Role.USER, languages
@@ -28,7 +28,7 @@ class User(
 
 @Entity
 class Language(
-    @Enumerated(EnumType.STRING) var name: LanguageName
+    @Enumerated(EnumType.STRING) var name: LanguageName,
 ) : BaseEntity()
 
 @Entity
@@ -38,7 +38,7 @@ class Session(
     var time: Timestamp,
     var rate: Byte,
     @ManyToOne var user: User,
-    @ManyToOne var operator: User?
+    @ManyToOne var operator: User?,
 ) : BaseEntity()
 
 @Entity
@@ -56,5 +56,5 @@ class Message(
     @ManyToOne var sender: User,
     @OneToOne var attachment: Attachment?,
     @Enumerated(EnumType.STRING) var messageType: MessageContentType,
-    var text: String?
+    var text: String?,
 ) : BaseEntity()

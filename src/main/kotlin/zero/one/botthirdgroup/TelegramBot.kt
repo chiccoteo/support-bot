@@ -1,6 +1,8 @@
 package zero.one.botthirdgroup
 
+import org.apache.logging.log4j.message.TimestampMessage
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.annotation.Bean
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForObject
@@ -54,7 +56,28 @@ class TelegramBot(
             if (message.hasText()) {
                 val text = message.text
 
+                println(message)
+                println(message.isReply)
+
+                val replyToMessage = message.replyToMessage
+
+
+
                 if (text.equals("/start")) {
+
+
+//                    val execute = execute(SendMessage(user.chatId, "Salom"))
+//
+//                    val sendMessage = SendMessage(user.chatId, "Alik")
+//                    sendMessage.replyToMessageId = execute.messageId
+//                    execute(sendMessage)
+
+
+                    println(message)
+
+//                    val message1 = Message()
+//                    message1.replyToMessage = Message()
+
 
                     if (user.role == Role.OPERATOR) {
                         if (user.botState != BotState.SESSION)
@@ -90,9 +113,29 @@ class TelegramBot(
 
                 if (user.botState == BotState.USER_MENU) {
                     if (text.equals("Savol so'rash❓") || text.equals("Задайте вопрос❓") || text.equals("Ask question❓")) {
+
                         val message1 = SendMessage()
                         message1.chatId = update.getChatId()
-                        message1.text = languageUtil.pleaseGiveQuestion(userLang)
+
+                        when {
+                            (userLang == LanguageName.UZ && text.equals("Savol so'rash❓")) -> {
+                                message1.text = languageUtil.pleaseGiveQuestion(LanguageName.UZ)
+                            }
+
+                            (userLang == LanguageName.RU && text.equals("Задайте вопрос❓")) -> {
+                                message1.text = languageUtil.pleaseGiveQuestion(LanguageName.RU)
+                            }
+
+                            (userLang == LanguageName.ENG && text.equals("Ask question❓")) -> {
+                                message1.text = languageUtil.pleaseGiveQuestion(LanguageName.ENG)
+
+                            }
+
+                            else -> {
+                                message1.text = languageUtil.errorLang(userLang)
+                            }
+                        }
+
                         val replyKeyboardRemove = ReplyKeyboardRemove(true)
                         message1.replyMarkup = replyKeyboardRemove
                         execute(message1)
@@ -165,6 +208,8 @@ class TelegramBot(
                                     }
                                 }
                                 for (waitedMessage in it) {
+
+
                                     if (waitedMessage.attachment == null) {
                                         waitedMessage.run {
                                             this.text?.let { text ->
@@ -232,7 +277,12 @@ class TelegramBot(
                                                 }
 
                                                 AttachmentContentType.STICKER -> {
-
+                                                    execute(
+                                                        SendSticker(
+                                                            waitedMessage.toChatId.toString(),
+                                                            InputFile(File(attachment.pathName))
+                                                        )
+                                                    )
                                                 }
                                             }
                                         }
@@ -361,9 +411,41 @@ class TelegramBot(
                     )
                 }
             } else if (message.hasSticker()) {
-//                val sticker = message.sticker
-//                val sendSticker = SendSticker("597555329", InputFile(sticker.fileId))
-//                execute(sendSticker)
+                val sticker = message.sticker
+
+                println(sticker)
+
+
+                var stickerType = "";
+
+                stickerType = if (sticker.isAnimated) "apng"
+                else "webp"
+
+
+                val attachment = create(sticker.fileId, "sticker.$stickerType", AttachmentContentType.STICKER)
+
+                val messageDTO = messageService.create(
+                    MessageDTO(
+                        message.messageId,
+                        null,
+                        Timestamp(System.currentTimeMillis()),
+                        user.chatId,
+                        null,
+                        null,
+                        attachment,
+                        MessageContentType.STICKER
+                    )
+                )
+
+                messageDTO?.let {
+                    execute(
+                        SendSticker(
+                            it.toChatId.toString(),
+                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
+                        )
+                    )
+                }
+
             } else if (message.hasVideo()) {
                 val video = message.video
                 val attachment = create(video.fileId, video.fileName, AttachmentContentType.VIDEO)
@@ -868,4 +950,10 @@ class TelegramBot(
         RestTemplate().getForObject<ByteArray>("https://api.telegram.org/file/bot${token}/${filePath}")
     }
 
+
+    fun sendNotificationToOperator(chatId: String) {
+
+
+
+    }
 }
