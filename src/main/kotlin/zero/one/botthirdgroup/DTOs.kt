@@ -2,7 +2,7 @@ package zero.one.botthirdgroup
 
 import java.sql.Timestamp
 import java.time.LocalDateTime
-
+data class BaseMessage(val code: Int, val message: String?)
 data class MessageDTO(
     val telegramMessageId: Int,
     val replyTelegramMessageId: Int?,

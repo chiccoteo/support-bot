@@ -73,7 +73,7 @@ class UserServiceImpl(
     }
 
     override fun updateRole(phone: String) {
-        val user = userRepository.findByPhoneNumberAndDeletedFalse(phone)
+        val user = userRepository.findByPhoneNumberAndDeletedFalse(phone) ?: throw UserNotFoundException(phone)
         user.role = Role.OPERATOR
         user.botState = BotState.OFFLINE
         userRepository.save(user)
@@ -81,6 +81,7 @@ class UserServiceImpl(
 
     override fun updateLang(dto: LanguageUpdateDTO) {
         val user = userRepository.findByPhoneNumberAndDeletedFalse(dto.phoneNumber)
+            ?: throw UserNotFoundException(dto.phoneNumber)
         user.languages = languageRepository.findAllById(dto.languages)
         userRepository.save(user)
     }
