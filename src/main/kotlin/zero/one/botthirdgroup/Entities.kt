@@ -51,6 +51,7 @@ class Attachment(
 class Message(
     var telegramMessageId: Int,
     var replyTelegramMessageId: Int?,
+    var executeTelegramMessageId: Int?,
     var time: Timestamp,
     @ManyToOne var session: Session,
     @ManyToOne var sender: User,

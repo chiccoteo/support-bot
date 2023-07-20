@@ -22,6 +22,10 @@ interface UserService {
 
 interface MessageService {
 
+    fun update(messageId: Int, executeMessageId: Int)
+
+    fun getReplyMessageId(messageId: Int): Int
+
     fun create(messageDTO: MessageDTO): MessageDTO?
 
     fun getWaitedMessages(chatId: String): List<MessageDTO>?
@@ -139,6 +143,21 @@ class MessageServiceImpl(
     private val messageRepo: MessageRepository,
     private val languageRepository: LanguageRepository,
 ) : MessageService {
+    override fun update(messageId: Int, executeMessageId: Int) {
+        messageRepo.findByTelegramMessageIdAndDeletedFalse(messageId).run {
+            this?.executeTelegramMessageId = executeMessageId
+            messageRepo.save(this!!)
+        }
+    }
+
+    override fun getReplyMessageId(messageId: Int): Int {
+        messageRepo.findByTelegramMessageIdAndDeletedFalse(messageId)?.executeTelegramMessageId?.let {
+            return it
+        }
+        messageRepo.findByExecuteTelegramMessageIdAndDeletedFalse(messageId)?.telegramMessageId.let {
+            return it!!
+        }
+    }
 
     override fun create(messageDTO: MessageDTO): MessageDTO? {
         messageDTO.run {
@@ -151,6 +170,7 @@ class MessageServiceImpl(
                                 Message(
                                     telegramMessageId,
                                     replyTelegramMessageId,
+                                    executeTelegramMessageId,
                                     time,
                                     session,
                                     senderUser,
@@ -169,6 +189,7 @@ class MessageServiceImpl(
                                 Message(
                                     telegramMessageId,
                                     replyTelegramMessageId,
+                                    executeTelegramMessageId,
                                     time,
                                     session,
                                     senderUser,
@@ -190,6 +211,7 @@ class MessageServiceImpl(
                                 Message(
                                     telegramMessageId,
                                     replyTelegramMessageId,
+                                    executeTelegramMessageId,
                                     time,
                                     sessionRepo.save(
                                         Session(
@@ -214,6 +236,7 @@ class MessageServiceImpl(
                             Message(
                                 telegramMessageId,
                                 replyTelegramMessageId,
+                                executeTelegramMessageId,
                                 time,
                                 sessionRepo.findByStatusTrueAndUser(senderUser) ?: sessionRepo.save(
                                     Session(
