@@ -6,6 +6,7 @@ data class BaseMessage(val code: Int, val message: String?)
 data class MessageDTO(
     val telegramMessageId: Int,
     val replyTelegramMessageId: Int?,
+    var executeTelegramMessageId: Int?,
     val time: Timestamp,
     val senderChatId: String,
     val toChatId: String?,
@@ -16,7 +17,7 @@ data class MessageDTO(
     companion object {
         fun toDTO(message: Message, toChatId: String?, attachment: Attachment?): MessageDTO {
             return message.run {
-                MessageDTO(telegramMessageId, replyTelegramMessageId, time, sender.chatId, toChatId, text, attachment, messageType)
+                MessageDTO(telegramMessageId, replyTelegramMessageId, executeTelegramMessageId, time, sender.chatId, toChatId, text, attachment, messageType)
             }
         }
     }
