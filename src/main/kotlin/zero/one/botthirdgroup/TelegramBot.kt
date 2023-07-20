@@ -2,6 +2,7 @@ package zero.one.botthirdgroup
 
 import org.apache.logging.log4j.message.TimestampMessage
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.annotation.Bean
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForObject
@@ -934,4 +935,10 @@ class TelegramBot(
         RestTemplate().getForObject<ByteArray>("https://api.telegram.org/file/bot${token}/${filePath}")
     }
 
+
+    fun sendNotificationToOperator(chatId: String) {
+
+
+
+    }
 }
