@@ -193,11 +193,11 @@ class TelegramBot(
                                 userService.update(user)
                                 val sender = userService.createOrTgUser(waitedMessages[0].senderChatId)
                                 getCloseOrCloseAndOff(user).let { connectingMessage ->
-                                    if (user.languages[0].equals(LanguageName.ENG)) {
+                                    if (user.languages[0].name == LanguageName.ENG) {
                                         connectingMessage.text = "You have contacted the " + sender.name
                                         execute(connectingMessage)
                                         sendText(sender, "You have contacted the " + user.name)
-                                    } else if (user.languages[0].equals(LanguageName.UZ)) {
+                                    } else if (user.languages[0].name == LanguageName.UZ) {
                                         connectingMessage.text = "Siz " + sender.name + " bilan bog'landingiz"
                                         execute(connectingMessage)
                                         sendText(sender, "Siz " + user.name + " bilan bog'landingiz")
