@@ -59,6 +59,8 @@ interface SessionRepository : BaseRepository<Session> {
     fun findByStatusTrueAndOperator(operator: User): Session?
     fun findByStatusTrueAndOperatorChatId(operatorChatId: String): Session?
     fun findByStatusTrueAndUserChatId(userChatId: String): Session?
+
+    fun findByUserChatIdAndRateAndDeletedFalse(userChatId: String, rate: Byte): Session
     fun findByStatusTrueAndUser(user: User): Session?
     fun findAllByStatusTrueAndSessionLanguageInAndOperatorIsNullOrderByTime(operatorLanguages: MutableList<Language>?): List<Session?>
 }

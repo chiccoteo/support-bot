@@ -28,11 +28,11 @@ interface MessageService {
 
     fun ratingOperator(sessionId: Long, rate: Byte)
 
-    fun closingSession(userChatId: String)
+    fun closingSession(operatorChatId: String)
 
     fun getSessionByOperator(operatorChatId: String): Session?
 
-    fun getSessionByUser(userChatId: String): Session?
+    fun isThereNotRatedSession(userChatId: String): Session
 
     fun isThereOneMessageInSession(userChatId: String): Boolean
 
@@ -274,9 +274,9 @@ class MessageServiceImpl(
         }
     }
 
-    override fun closingSession(userChatId: String) {
-        userRepo.findByChatIdAndDeletedFalse(userChatId)?.let {
-            sessionRepo.findByStatusTrueAndUser(it)?.run {
+    override fun closingSession(operatorChatId: String) {
+        userRepo.findByChatIdAndDeletedFalse(operatorChatId)?.let {
+            sessionRepo.findByStatusTrueAndOperator(it)?.run {
                 this.status = false
                 sessionRepo.save(this)
             }
@@ -287,8 +287,8 @@ class MessageServiceImpl(
         return sessionRepo.findByStatusTrueAndOperatorChatId(operatorChatId)!!
     }
 
-    override fun getSessionByUser(userChatId: String): Session {
-        return sessionRepo.findByStatusTrueAndUserChatId(userChatId)!!
+    override fun isThereNotRatedSession(userChatId: String): Session {
+        return sessionRepo.findByUserChatIdAndRateAndDeletedFalse(userChatId, 0)
     }
 
     override fun isThereOneMessageInSession(userChatId: String): Boolean {
