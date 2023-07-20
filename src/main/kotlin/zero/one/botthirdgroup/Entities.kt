@@ -13,15 +13,15 @@ class BaseEntity(
 @Entity(name = "users")
 class User(
     var name: String?,
+    var username: String?,
     var phoneNumber: String?,
     var chatId: String,
-    var rate: Double,
     @Enumerated(EnumType.STRING) var role: Role = Role.USER,
     @ManyToMany(fetch = FetchType.EAGER) var languages: MutableList<Language>,
     @Enumerated(EnumType.STRING) var botState: BotState = BotState.START
 ) : BaseEntity() {
     constructor(chatId: String, languages: MutableList<Language>) : this(
-        null, null, chatId, 5.0, Role.USER, languages
+        null, null, null, chatId, Role.USER, languages
     )
 
 }
@@ -36,6 +36,7 @@ class Session(
     @ColumnDefault(value = "true") var status: Boolean,
     @ManyToOne var sessionLanguage: Language,
     var time: Timestamp,
+    var rate: Double = 0.0,
     @ManyToOne var user: User,
     @ManyToOne var operator: User?
 ) : BaseEntity()
@@ -50,9 +51,11 @@ class Attachment(
 class Message(
     var telegramMessageId: Int,
     var replyTelegramMessageId: Int?,
+    var executeMessageId: Int,
     var time: Timestamp,
     @ManyToOne var session: Session,
     @ManyToOne var sender: User,
     @OneToOne var attachment: Attachment?,
+    @Enumerated(EnumType.STRING) var messageType: MessageContentType,
     var text: String?
 ) : BaseEntity()
