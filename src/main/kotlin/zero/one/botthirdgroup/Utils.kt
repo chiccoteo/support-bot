@@ -70,6 +70,14 @@ class LanguageUtil {
             LanguageName.ENG -> "Close the session"
         }
     }
+
+    fun closeAndCloseOff(lang: LanguageName): String {
+        return when (lang) {
+            LanguageName.UZ -> "Sessiya ochildi"
+            LanguageName.RU -> "Сессия открыта"
+            LanguageName.ENG -> "Session opened"
+        }
+    }
 }
 
 

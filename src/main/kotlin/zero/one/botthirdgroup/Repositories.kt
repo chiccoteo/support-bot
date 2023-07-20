@@ -54,12 +54,15 @@ interface LanguageRepository : BaseRepository<Language> {
 
 interface SessionRepository : BaseRepository<Session> {
     fun findByStatusTrueAndOperator(operator: User): Session?
+    fun findByStatusTrueAndOperatorChatId(operatorChatId: String): Session?
+    fun findByStatusTrueAndUserChatId(userChatId: String): Session?
     fun findByStatusTrueAndUser(user: User): Session?
     fun findAllByStatusTrueAndSessionLanguageInAndOperatorIsNullOrderByTime(operatorLanguages: MutableList<Language>?): List<Session?>
 }
 
 interface MessageRepository : BaseRepository<Message> {
     fun findAllBySessionAndDeletedFalseOrderByTime(session: Session): List<Message>
+    fun findAllBySessionAndDeletedFalse(session: Session): List<Message>
 }
 
 interface AttachmentRepository : BaseRepository<Attachment>
