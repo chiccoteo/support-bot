@@ -30,6 +30,18 @@ interface MessageService {
     fun closingSession(operatorChatId: String)
 
 }
+interface SessionService{
+    fun getOperatorAvgRate(): List<GetOperatorAvgRateDTO>
+
+}
+@Service
+class SessionServiceImpl(
+    private val sessionRepo: SessionRepository
+):SessionService {
+    override fun getOperatorAvgRate(): List<GetOperatorAvgRateDTO> {
+        return sessionRepo.getOperatorAvgRate()
+    }
+}
 
 @Service
 class UserServiceImpl(

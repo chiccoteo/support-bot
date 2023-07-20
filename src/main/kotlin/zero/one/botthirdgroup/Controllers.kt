@@ -22,7 +22,8 @@ class ExceptionHandlers(
 }
 @RestController
 @RequestMapping("/api/v1/admin")
-class AdminController(private val service: UserService) {
+class AdminController(private val service: UserService,
+    private val sessionService: SessionService) {
     @GetMapping
     fun getAll(pageable: Pageable): Page<GetUserDTO> = service.getAll(pageable)
 
@@ -38,4 +39,7 @@ class AdminController(private val service: UserService) {
 
     @PutMapping
     fun updateLang(@RequestBody dto : LanguageUpdateDTO) = service.updateLang(dto)
+
+    @GetMapping("getOperatorAvgRate")
+    fun getOperatorAvgRate():List<GetOperatorAvgRateDTO> = sessionService.getOperatorAvgRate();
 }
