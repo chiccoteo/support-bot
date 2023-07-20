@@ -1,7 +1,6 @@
 package zero.one.botthirdgroup
 
 import java.sql.Timestamp
-import java.time.LocalDateTime
 
 data class BaseMessage(val code: Int, val message: String?)
 data class MessageDTO(
@@ -11,12 +10,13 @@ data class MessageDTO(
     val senderChatId: String,
     val toChatId: String?,
     val text: String?,
-    val attachment: Attachment?
+    val attachment: Attachment?,
+    val messageType: MessageContentType
 ) {
     companion object {
         fun toDTO(message: Message, toChatId: String?, attachment: Attachment?): MessageDTO {
             return message.run {
-                MessageDTO(telegramMessageId, replyTelegramMessageId, time, sender.chatId, toChatId, text, attachment)
+                MessageDTO(telegramMessageId, replyTelegramMessageId, time, sender.chatId, toChatId, text, attachment, messageType)
             }
         }
     }

@@ -36,7 +36,7 @@ class Session(
     @ColumnDefault(value = "true") var status: Boolean,
     @ManyToOne var sessionLanguage: Language,
     var time: Timestamp,
-    var rate: Double = 0.0,
+    var rate: Double,
     @ManyToOne var user: User,
     @ManyToOne var operator: User?
 ) : BaseEntity()
@@ -51,7 +51,6 @@ class Attachment(
 class Message(
     var telegramMessageId: Int,
     var replyTelegramMessageId: Int?,
-    var executeMessageId: Int,
     var time: Timestamp,
     @ManyToOne var session: Session,
     @ManyToOne var sender: User,
