@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import zero.one.botthirdgroup.MessageDTO.Companion.toDTO
+import java.util.LinkedList
 
 interface UserService {
     fun createOrTgUser(chatId: String): User
@@ -35,6 +36,27 @@ interface MessageService {
 
     fun isThereOneMessageInSession(userChatId: String): Boolean
 
+}
+
+interface SessionService {
+    fun getOperatorAvgRate(): List<GetOperatorAvgRateDTO>
+
+}
+
+@Service
+class SessionServiceImpl(
+    private val sessionRepo: SessionRepository,
+    private val userRepository: UserRepository
+) : SessionService {
+    override fun getOperatorAvgRate(): List<GetOperatorAvgRateDTO> {
+        val list = sessionRepo.getOperatorAvgRate()
+        var response = LinkedList<GetOperatorAvgRateDTO>()
+        for (operatorAvgRateMapper in list) {
+            val operator = userRepository.findByIdAndDeletedFalse(operatorAvgRateMapper.getOperatorId())
+            response.add(GetOperatorAvgRateDTO(operator!!, operatorAvgRateMapper.getAvgRate()))
+        }
+        return response
+    }
 }
 
 @Service
@@ -79,7 +101,7 @@ class UserServiceImpl(
     }
 
     override fun updateRole(phone: String) {
-        val user = userRepository.findByPhoneNumberAndDeletedFalse(phone)
+        val user = userRepository.findByPhoneNumberAndDeletedFalse(phone) ?: throw UserNotFoundException(phone)
         user.role = Role.OPERATOR
         user.botState = BotState.OFFLINE
         userRepository.save(user)
@@ -87,6 +109,7 @@ class UserServiceImpl(
 
     override fun updateLang(dto: LanguageUpdateDTO) {
         val user = userRepository.findByPhoneNumberAndDeletedFalse(dto.phoneNumber)
+            ?: throw UserNotFoundException(dto.phoneNumber)
         user.languages = languageRepository.findAllById(dto.languages)
         userRepository.save(user)
     }
