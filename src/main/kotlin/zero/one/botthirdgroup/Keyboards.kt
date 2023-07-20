@@ -16,18 +16,13 @@ class InlineKeyboardMarkupBuilder(
             this.callbackData = callbackData
         }
 
-        fun paymentButton(text: String, callbackData: String) = InlineKeyboardButton().apply {
-            this.text = text
-            this.callbackData = callbackData
-            this.pay = true
-        }
 
         fun buttonUrl(text: String, url: String) = InlineKeyboardButton().apply {
             this.text = text
             this.url = url
         }
 
-        fun buttons(map: Map<String, String>): List<InlineKeyboardButton> {//map key is query value is text
+        fun buttons(map: Map<String, String>): List<InlineKeyboardButton> {
             val list = arrayListOf<InlineKeyboardButton>()
             map.map { (key: String, value: String) ->
                 {

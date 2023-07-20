@@ -78,6 +78,14 @@ class LanguageUtil {
             LanguageName.ENG -> "Session opened"
         }
     }
+
+    fun errorLang(lang: LanguageName): String {
+        return when (lang) {
+            LanguageName.UZ -> "Iltimos o'zbek tilida xabar yozing"
+            LanguageName.RU -> "Пожалуйста, напишите сообщение на русском языке"
+            LanguageName.ENG -> "Please write in English"
+        }
+    }
 }
 
 

@@ -1,8 +1,12 @@
 package zero.one.botthirdgroup
 
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.annotation.Lazy
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
+import org.springframework.web.client.RestTemplate
+import org.springframework.web.client.getForObject
 import zero.one.botthirdgroup.MessageDTO.Companion.toDTO
 import java.util.LinkedList
 
@@ -50,7 +54,7 @@ interface SessionService {
 @Service
 class SessionServiceImpl(
     private val sessionRepo: SessionRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
 ) : SessionService {
     override fun getOperatorAvgRate(): List<GetOperatorAvgRateDTO> {
         val list = sessionRepo.getOperatorAvgRate()
@@ -68,6 +72,9 @@ class UserServiceImpl(
     private val userRepository: UserRepository,
     private val languageRepository: LanguageRepository,
 ) : UserService {
+
+    @Value("\${telegram.bot.token}")
+    private val token: String = ""
 
     override fun createOrTgUser(chatId: String): User {
         return userRepository.findByChatIdAndDeletedFalse(chatId)
@@ -109,6 +116,15 @@ class UserServiceImpl(
         user.role = Role.OPERATOR
         user.botState = BotState.OFFLINE
         userRepository.save(user)
+
+
+        val restTemplate = RestTemplate()
+        val response = restTemplate.getForObject(
+            "https://api.telegram.org/bot$token/sendMessage?chat_id=${user.chatId}&text=Siz operator qilib tayinlandingiz. Iltimos /start buyrug'ini bosing",
+            String::class.java
+        )
+        println("Response: $response")
+
     }
 
     override fun updateLang(dto: LanguageUpdateDTO) {
