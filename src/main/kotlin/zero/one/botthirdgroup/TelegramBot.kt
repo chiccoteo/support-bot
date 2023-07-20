@@ -150,10 +150,19 @@ class TelegramBot(
                                 userService.update(user)
                                 val sender = userService.createOrTgUser(waitedMessages[0].senderChatId)
                                 getCloseOrCloseAndOff(user).let { connectingMessage ->
-                                    connectingMessage.text =
-                                        "Siz " + sender.name + " bilan bog'landingiz"
-                                    execute(connectingMessage)
-                                    sendText(sender, "Siz " + user.name + " bilan bog'landingiz")
+                                    if (user.languages[0].equals(LanguageName.ENG)) {
+                                        connectingMessage.text = "You have contacted the " + sender.name
+                                        execute(connectingMessage)
+                                        sendText(sender, "You have contacted the " + user.name)
+                                    } else if (user.languages[0].equals(LanguageName.UZ)) {
+                                        connectingMessage.text = "Siz " + sender.name + " bilan bog'landingiz"
+                                        execute(connectingMessage)
+                                        sendText(sender, "Siz " + user.name + " bilan bog'landingiz")
+                                    } else {
+                                        connectingMessage.text = "вы связались с " + sender.name
+                                        execute(connectingMessage)
+                                        sendText(sender, "вы связались с " + user.name)
+                                    }
                                 }
                                 for (waitedMessage in it) {
                                     if (waitedMessage.attachment == null) {
@@ -608,6 +617,7 @@ class TelegramBot(
         val phoneNumber = contact.phoneNumber
 //        tgUser.name = contact.firstName + " " + contact.lastName
         contact.run {
+            tgUser.name = ""
             firstName?.let { tgUser.name += firstName }
             lastName?.let { tgUser.name += lastName }
         }
