@@ -455,7 +455,6 @@ class TelegramBot(
                 userMenu(user)
             }
         }
-
     }
 
     private fun getReplyMessageTgId(message: Message): Int? {
