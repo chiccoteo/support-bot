@@ -7,83 +7,83 @@ import org.springframework.stereotype.Component
 class LanguageUtil {
 
 
-    fun contactButtonTxt(lang: LanguageName): String {
+    fun contactButtonTxt(lang: LanguageEnum): String {
         return when (lang) {
-            LanguageName.UZ -> "Kontaktingizni yuboring \uD83D\uDCDE"
-            LanguageName.RU -> "Отправьте свой контакт \uD83D\uDCDE"
-            LanguageName.ENG -> "Send your contact \uD83D\uDCDE"
+            LanguageEnum.UZ -> "Kontaktingizni yuboring \uD83D\uDCDE"
+            LanguageEnum.RU -> "Отправьте свой контакт \uD83D\uDCDE"
+            LanguageEnum.ENG -> "Send your contact \uD83D\uDCDE"
         }
     }
 
-    fun langBtnTxt(lang: LanguageName): String {
+    fun langBtnTxt(lang: LanguageEnum): String {
         return when (lang) {
-            LanguageName.UZ -> "Kontaktingizni yuboring \uD83D\uDCDE"
-            LanguageName.RU -> "Отправьте свой контакт \uD83D\uDCDE"
-            LanguageName.ENG -> "Send your contact \uD83D\uDCDE"
+            LanguageEnum.UZ -> "Kontaktingizni yuboring \uD83D\uDCDE"
+            LanguageEnum.RU -> "Отправьте свой контакт \uD83D\uDCDE"
+            LanguageEnum.ENG -> "Send your contact \uD83D\uDCDE"
         }
     }
 
-    fun askQuestionTxt(lang: LanguageName): String {
+    fun askQuestionTxt(lang: LanguageEnum): String {
         return when (lang) {
-            LanguageName.UZ -> "Savol so'rash❓"
-            LanguageName.RU -> "Задайте вопрос❓"
-            LanguageName.ENG -> "Ask question❓"
+            LanguageEnum.UZ -> "Savol so'rash❓"
+            LanguageEnum.RU -> "Задайте вопрос❓"
+            LanguageEnum.ENG -> "Ask question❓"
         }
     }
 
 
-    fun chooseMenu(lang: LanguageName): String {
+    fun chooseMenu(lang: LanguageEnum): String {
         return when (lang) {
-            LanguageName.UZ -> "Kerakli bo'imni tanlang \uD83D\uDC47"
-            LanguageName.RU -> "Выберите нужный раздел \uD83D\uDC47"
-            LanguageName.ENG -> "Select the desired section \uD83D\uDC47"
+            LanguageEnum.UZ -> "Kerakli bo'imni tanlang \uD83D\uDC47"
+            LanguageEnum.RU -> "Выберите нужный раздел \uD83D\uDC47"
+            LanguageEnum.ENG -> "Select the desired section \uD83D\uDC47"
         }
     }
 
-    fun settings(lang: LanguageName): String {
+    fun settings(lang: LanguageEnum): String {
         return when (lang) {
-            LanguageName.UZ -> "Sozlamalar ⚙️"
-            LanguageName.RU -> "Настройки ⚙️"
-            LanguageName.ENG -> "Settings ⚙️"
+            LanguageEnum.UZ -> "Sozlamalar ⚙️"
+            LanguageEnum.RU -> "Настройки ⚙️"
+            LanguageEnum.ENG -> "Settings ⚙️"
         }
     }
 
-    fun chooseMenuTextReq(lang: LanguageName): String {
+    fun chooseMenuTextReq(lang: LanguageEnum): String {
         return when (lang) {
-            LanguageName.UZ -> "Iltimos kerakli bo'limni tanlang"
-            LanguageName.RU -> "Пожалуйста, выберите нужный раздел"
-            LanguageName.ENG -> "Please select the desired section️"
+            LanguageEnum.UZ -> "Iltimos kerakli bo'limni tanlang"
+            LanguageEnum.RU -> "Пожалуйста, выберите нужный раздел"
+            LanguageEnum.ENG -> "Please select the desired section️"
         }
     }
 
-    fun pleaseGiveQuestion(lang: LanguageName): String {
+    fun pleaseGiveQuestion(lang: LanguageEnum): String {
         return when (lang) {
-            LanguageName.UZ -> "Qanday savolingiz bor?"
-            LanguageName.RU -> "Какой у вас вопрос?"
-            LanguageName.ENG -> "What question do you have?"
+            LanguageEnum.UZ -> "Qanday savolingiz bor?"
+            LanguageEnum.RU -> "Какой у вас вопрос?"
+            LanguageEnum.ENG -> "What question do you have?"
         }
     }
-    fun closeSessionBtnTxt(lang: LanguageName): String {
+    fun closeSessionBtnTxt(lang: LanguageEnum): String {
         return when (lang) {
-            LanguageName.UZ -> "Sessiyani yopish"
-            LanguageName.RU -> "Закрыть сеанс"
-            LanguageName.ENG -> "Close the session"
-        }
-    }
-
-    fun closeAndCloseOff(lang: LanguageName): String {
-        return when (lang) {
-            LanguageName.UZ -> "Sessiya ochildi"
-            LanguageName.RU -> "Сессия открыта"
-            LanguageName.ENG -> "Session opened"
+            LanguageEnum.UZ -> "Sessiyani yopish"
+            LanguageEnum.RU -> "Закрыть сеанс"
+            LanguageEnum.ENG -> "Close the session"
         }
     }
 
-    fun errorLang(lang: LanguageName): String {
+    fun closeAndCloseOff(lang: LanguageEnum): String {
         return when (lang) {
-            LanguageName.UZ -> "Iltimos o'zbek tilida xabar yozing"
-            LanguageName.RU -> "Пожалуйста, напишите сообщение на русском языке"
-            LanguageName.ENG -> "Please write in English"
+            LanguageEnum.UZ -> "Sessiya ochildi"
+            LanguageEnum.RU -> "Сессия открыта"
+            LanguageEnum.ENG -> "Session opened"
+        }
+    }
+
+    fun errorLang(lang: LanguageEnum): String {
+        return when (lang) {
+            LanguageEnum.UZ -> "Iltimos o'zbek tilida xabar yozing"
+            LanguageEnum.RU -> "Пожалуйста, напишите сообщение на русском языке"
+            LanguageEnum.ENG -> "Please write in English"
         }
     }
 }

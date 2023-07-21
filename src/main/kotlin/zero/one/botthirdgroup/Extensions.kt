@@ -2,6 +2,7 @@ package zero.one.botthirdgroup
 
 import org.telegram.telegrambots.meta.api.objects.Update
 import java.lang.RuntimeException
+import java.util.*
 
 fun Update.getChatId(): String {
     return when {
@@ -10,3 +11,5 @@ fun Update.getChatId(): String {
         else -> throw RuntimeException("Chat id not found!")
     }
 }
+
+fun LanguageEnum.toLocale() = Locale(this.code)

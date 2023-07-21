@@ -28,7 +28,7 @@ class User(
 
 @Entity
 class Language(
-    @Enumerated(EnumType.STRING) var name: LanguageName,
+    @Enumerated(EnumType.STRING) var name: LanguageEnum,
 ) : BaseEntity()
 
 @Entity

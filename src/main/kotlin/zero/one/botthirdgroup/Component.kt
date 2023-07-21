@@ -25,9 +25,9 @@ class DataLoader(
 
 
         if (languageRepository.findAll().isEmpty()) {
-            languageRepository.save(Language(LanguageName.UZ))
-            languageRepository.save(Language(LanguageName.RU))
-            languageRepository.save(Language(LanguageName.ENG))
+            languageRepository.save(Language(LanguageEnum.UZ))
+            languageRepository.save(Language(LanguageEnum.RU))
+            languageRepository.save(Language(LanguageEnum.ENG))
         }
 
     }
@@ -46,12 +46,11 @@ class WebMvcConfigure : WebMvcConfigurer {
     @Bean
     fun localeResolver() = SessionLocaleResolver().apply { setDefaultLocale(Locale("ru")) }
 
-    //Har bitta requestni servletga kelishi bilan headerni o'qib languageni contextga set qiladi
     @Bean
     fun localeChangeInterceptor() = HeaderLocaleChangeInterceptor("hl")
 
     override fun addInterceptors(registry: InterceptorRegistry) {
-        registry.addInterceptor(localeChangeInterceptor())//Betda yozgan interceptorimizani register qp qoyvommiza
+        registry.addInterceptor(localeChangeInterceptor())
     }
 }
 
@@ -70,5 +69,18 @@ class HeaderLocaleChangeInterceptor(val headerName: String) : HandlerInterceptor
             LocaleContextHolder.setLocale(Locale("uz"))
         }
         return true
+    }
+}
+
+@Component
+class Components() {
+    @Bean
+    fun messageResourceBundleMessageSource(): ResourceBundleMessageSource? {
+        val messageSource = ResourceBundleMessageSource()
+        messageSource.setBasename("messages")
+        messageSource.setCacheSeconds(3600)
+        messageSource.setDefaultLocale(Locale.US)
+        messageSource.setDefaultEncoding("UTF-8")
+        return messageSource
     }
 }

@@ -1,7 +1,10 @@
 package zero.one.botthirdgroup
 
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.cglib.core.Local
 import org.springframework.context.annotation.Lazy
+import org.springframework.context.i18n.LocaleContextHolder
+import org.springframework.context.support.ResourceBundleMessageSource
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -9,6 +12,7 @@ import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForObject
 import zero.one.botthirdgroup.MessageDTO.Companion.toDTO
 import java.util.LinkedList
+import java.util.Locale
 
 interface UserService {
     fun createOrTgUser(chatId: String): User
@@ -47,6 +51,11 @@ interface SessionService {
 
 }
 
+interface MessageSourceService {
+    fun getMessage(sourceKey: LocalizationTextKey, languageEnum: LanguageEnum): String
+    fun getMessage(sourceKey: LocalizationTextKey, any: Array<String>, languageEnum: LanguageEnum): String
+}
+
 @Service
 class SessionServiceImpl(
     private val sessionRepo: SessionRepository,
@@ -77,7 +86,7 @@ class UserServiceImpl(
             ?: userRepository.save(
                 User(
                     chatId,
-                    mutableListOf(languageRepository.findByName(LanguageName.UZ))
+                    mutableListOf(languageRepository.findByName(LanguageEnum.UZ))
                 )
             )
     }
@@ -315,4 +324,16 @@ class MessageServiceImpl(
         return false
     }
 
+}
+
+@Service
+class MessageSourceServiceImpl(val messageResourceBundleMessageSource: ResourceBundleMessageSource) :
+    MessageSourceService {
+    override fun getMessage(sourceKey: LocalizationTextKey, languageEnum: LanguageEnum): String {
+        return messageResourceBundleMessageSource.getMessage(sourceKey.name, null, languageEnum.toLocale())
+    }
+
+    override fun getMessage(sourceKey: LocalizationTextKey, any: Array<String>, languageEnum: LanguageEnum): String {
+        return messageResourceBundleMessageSource.getMessage(sourceKey.name, any, languageEnum.toLocale())
+    }
 }
