@@ -1,5 +1,5 @@
 ### update role
-PUT localhost:8080/api/v1/admin/+998999686653
+PUT localhost:8080/api/v1/admin/+998979516170
 
 ### getOperatorAvgRate
 GET localhost:8081/api/v1/admin/getOperatorAvgRate

@@ -7,6 +7,7 @@ import org.springframework.web.client.getForObject
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.GetFile
 import org.telegram.telegrambots.meta.api.methods.send.*
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.objects.Contact
 import org.telegram.telegrambots.meta.api.objects.InputFile
 import org.telegram.telegrambots.meta.api.objects.Message
@@ -414,8 +415,9 @@ class TelegramBot(
 
         } else if (update.hasCallbackQuery()) {
             val data = update.callbackQuery.data
-            execute(DeleteMessage(update.getChatId(), update.callbackQuery.message.messageId))
+            val deletingMessageId = update.callbackQuery.message.messageId
             if (user.botState == BotState.START || user.botState == BotState.CHANGE_LANG) {
+                execute(DeleteMessage(update.getChatId(), deletingMessageId))
                 if (user.botState == BotState.START) {
                     user.botState = BotState.CHOOSE_LANG
                     userService.update(user)
@@ -463,8 +465,8 @@ class TelegramBot(
                 }
             }
             if (user.botState == BotState.RATING) {
-                execute(DeleteMessage(update.getChatId(), update.callbackQuery.message.messageId))
                 messageService.ratingOperator(data.substring(1).toLong(), data.substring(0, 1).toByte())
+                execute(DeleteMessage(update.getChatId(), deletingMessageId))
                 user.botState = BotState.USER_MENU
                 userService.update(user)
                 userMenu(user)
