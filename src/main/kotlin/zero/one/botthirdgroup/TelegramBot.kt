@@ -312,8 +312,8 @@ class TelegramBot(
                 }
             } else if (message.hasSticker()) {
                 val sticker = message.sticker
-                var stickerType = ""
-                stickerType = if (sticker.isAnimated) "apng"
+                var stickerType = "";
+                stickerType = if (sticker.isAnimated) "tgs"
                 else "webp"
                 val attachment = create(sticker.fileId, "sticker.$stickerType", AttachmentContentType.STICKER)
                 val messageDTO = messageService.create(
