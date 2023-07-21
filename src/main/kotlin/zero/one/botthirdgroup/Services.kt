@@ -117,12 +117,10 @@ class UserServiceImpl(
 
 
         val restTemplate = RestTemplate()
-        val response = restTemplate.getForObject(
+        restTemplate.getForObject(
             "https://api.telegram.org/bot$token/sendMessage?chat_id=${user.chatId}&text=Siz operator qilib tayinlandingiz. Iltimos /start buyrug'ini bosing",
             String::class.java
         )
-        println("Response: $response")
-
     }
 
     override fun updateLang(dto: LanguageUpdateDTO) {
