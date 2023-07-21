@@ -414,6 +414,7 @@ class TelegramBot(
 
         } else if (update.hasCallbackQuery()) {
             val data = update.callbackQuery.data
+            execute(DeleteMessage(update.getChatId(), update.callbackQuery.message.messageId))
             if (user.botState == BotState.START || user.botState == BotState.CHANGE_LANG) {
                 if (user.botState == BotState.START) {
                     user.botState = BotState.CHOOSE_LANG
@@ -462,6 +463,7 @@ class TelegramBot(
                 }
             }
             if (user.botState == BotState.RATING) {
+                execute(DeleteMessage(update.getChatId(), update.callbackQuery.message.messageId))
                 messageService.ratingOperator(data.substring(1).toLong(), data.substring(0, 1).toByte())
                 user.botState = BotState.USER_MENU
                 userService.update(user)
