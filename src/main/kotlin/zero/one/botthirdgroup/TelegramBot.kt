@@ -225,7 +225,6 @@ class TelegramBot(
                 if (user.botState == BotState.SHARE_CONTACT) {
                     val contact = message.contact
                     if (message.from.id == contact.userId) {
-//                        execute(DeleteMessage(update.getChatId(), message.messageId))
                         getContact(user, contact)
                     } else {
                         sendText(
@@ -291,7 +290,7 @@ class TelegramBot(
                 }
             } else if (message.hasSticker()) {
                 val sticker = message.sticker
-                var stickerType = "";
+                var stickerType = ""
                 stickerType = if (sticker.isAnimated) "apng"
                 else "webp"
                 val attachment = create(sticker.fileId, "sticker.$stickerType", AttachmentContentType.STICKER)
@@ -670,7 +669,7 @@ class TelegramBot(
     private fun rateOperator(session: Session) {
         val inlineKeyboardMarkup = InlineKeyboardMarkup()
         val rows: MutableList<MutableList<InlineKeyboardButton>> = mutableListOf()
-        var row: MutableList<InlineKeyboardButton> = mutableListOf()
+        val row: MutableList<InlineKeyboardButton> = mutableListOf()
         var button = InlineKeyboardButton()
 
         button.text = "1"
@@ -804,7 +803,7 @@ class TelegramBot(
         val rows: MutableList<MutableList<InlineKeyboardButton>> = mutableListOf()
 
         var button = InlineKeyboardButton()
-        var row: MutableList<InlineKeyboardButton> = mutableListOf()
+        val row: MutableList<InlineKeyboardButton> = mutableListOf()
         button.text = "UZ \uD83C\uDDFA\uD83C\uDDFF"
         button.callbackData = "UZ"
 
