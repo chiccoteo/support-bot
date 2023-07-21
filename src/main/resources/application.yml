@@ -19,7 +19,7 @@ spring:
     hibernate:
       naming:
         implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyComponentPathImpl
-      ddl-auto: create
+      ddl-auto: update
     defer-datasource-initialization: true
   main:
     allow-circular-references: true
