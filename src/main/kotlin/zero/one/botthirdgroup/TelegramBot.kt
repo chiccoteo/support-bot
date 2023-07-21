@@ -33,6 +33,7 @@ class TelegramBot(
     private val languageRepository: LanguageRepository,
     private val messageService: MessageService,
     private val attachmentRepo: AttachmentRepository,
+    private val messageSourceService: MessageSourceService
 ) : TelegramLongPollingBot() {
 
     @Value("\${telegram.bot.username}")
@@ -51,7 +52,7 @@ class TelegramBot(
 
         if (update.hasMessage()) {
             val message = update.message
-            val userLang: LanguageName = user.languages[0].name
+            val userLang: LanguageEnum = user.languages[0].name
             if (message.hasText()) {
                 val text = message.text
                 if (text.equals("/start")) {
@@ -92,16 +93,16 @@ class TelegramBot(
                         message1.chatId = update.getChatId()
 
                         when {
-                            (userLang == LanguageName.UZ && text.equals("Savol so'rash❓")) -> {
-                                message1.text = languageUtil.pleaseGiveQuestion(LanguageName.UZ)
+                            (userLang == LanguageEnum.UZ && text.equals("Savol so'rash❓")) -> {
+                                message1.text = languageUtil.pleaseGiveQuestion(LanguageEnum.UZ)
                             }
 
-                            (userLang == LanguageName.RU && text.equals("Задайте вопрос❓")) -> {
-                                message1.text = languageUtil.pleaseGiveQuestion(LanguageName.RU)
+                            (userLang == LanguageEnum.RU && text.equals("Задайте вопрос❓")) -> {
+                                message1.text = languageUtil.pleaseGiveQuestion(LanguageEnum.RU)
                             }
 
-                            (userLang == LanguageName.ENG && text.equals("Ask question❓")) -> {
-                                message1.text = languageUtil.pleaseGiveQuestion(LanguageName.ENG)
+                            (userLang == LanguageEnum.ENG && text.equals("Ask question❓")) -> {
+                                message1.text = languageUtil.pleaseGiveQuestion(LanguageEnum.ENG)
 
                             }
 
@@ -138,12 +139,24 @@ class TelegramBot(
                         val tgUser = userService.createOrTgUser(create.toChatId.toString())
                         if (messageService.isThereOneMessageInSession(update.getChatId())) {
                             val connectingMessage: SendMessage
+                            val message: String =
+                                messageSourceService.getMessage(
+                                    LocalizationTextKey.CONNECTED_TRUE,
+                                    user.languages[0].name
+                                )
                             getCloseOrCloseAndOff(tgUser).let {
-                                it.text = "Siz " + user.name + " bilan bog'landingiz"
+                                it.text = message + " " + user.name
                                 connectingMessage = it
                             }
                             execute(connectingMessage)
-                            sendText(user, "Siz " + tgUser.name + " bilan bog'landingiz")
+                            sendText(user, message + " " + tgUser.name)
+                            /*                            getCloseOrCloseAndOff(tgUser).let {
+                                                            it.text = "Siz " + user.name + " bilan bog'landingiz"
+                                                            connectingMessage = it
+                                                        }
+                                                        execute(connectingMessage)
+                                                       sendText(user, "Siz " + tgUser.name + " bilan bog'landingiz")
+                                      */
                         }
                         sendMessage(create, tgUser.chatId)
                         tgUser.botState = BotState.SESSION
@@ -174,8 +187,18 @@ class TelegramBot(
 
                 // Sending messages for Operator
                 else if (user.botState == BotState.SESSION) {
-                    if (text.equals("CLOSE") || text.equals("CLOSE AND OFF")) {
-                        if (text.equals("CLOSE")) {
+                    val sessionByOperator = messageService.getSessionByOperator(user.chatId)
+                    val close = messageSourceService.getMessage(
+                        LocalizationTextKey.CLOSE_BT,
+                        sessionByOperator?.sessionLanguage?.name!!
+                    )
+                    val closeAndOff =
+                        messageSourceService.getMessage(
+                            LocalizationTextKey.CLOSE_AND_OFF_BT,
+                            sessionByOperator.sessionLanguage.name
+                        )
+                    if (text.equals(close) || text.equals(closeAndOff)) {
+                        if (text.equals(close)) {
                             val session = messageService.getSessionByOperator(update.getChatId())!!
                             rateOperator(session)
                             messageService.closingSession(update.getChatId())
@@ -226,7 +249,13 @@ class TelegramBot(
                     if (message.from.id == contact.userId) {
                         getContact(user, contact)
                     } else {
-                        sendText(user, "Iltimos share contact")
+                        sendText(
+                            user,
+                            messageSourceService.getMessage(
+                                LocalizationTextKey.PLEASE_SHARE_CONTACT,
+                                user.languages[0].name
+                            )
+                        )
                     }
 
                 }
@@ -424,7 +453,7 @@ class TelegramBot(
                 }
                 when (data) {
                     "UZ" -> {
-                        user.languages = mutableListOf(languageRepository.findByName(LanguageName.UZ))
+                        user.languages = mutableListOf(languageRepository.findByName(LanguageEnum.UZ))
                         if (user.botState == BotState.CHANGE_LANG) {
                             user.botState = BotState.USER_MENU
                             userService.update(user)
@@ -432,12 +461,12 @@ class TelegramBot(
                         } else
                             sendContactRequest(
                                 user,
-                                languageUtil.contactButtonTxt(LanguageName.UZ)
+                                languageUtil.contactButtonTxt(LanguageEnum.UZ)
                             )
                     }
 
                     "RU" -> {
-                        user.languages = mutableListOf(languageRepository.findByName(LanguageName.RU))
+                        user.languages = mutableListOf(languageRepository.findByName(LanguageEnum.RU))
                         if (user.botState == BotState.CHANGE_LANG) {
                             user.botState = BotState.USER_MENU
                             userService.update(user)
@@ -445,12 +474,12 @@ class TelegramBot(
                         } else
                             sendContactRequest(
                                 user,
-                                languageUtil.contactButtonTxt(LanguageName.RU)
+                                languageUtil.contactButtonTxt(LanguageEnum.RU)
                             )
                     }
 
                     "ENG" -> {
-                        user.languages = mutableListOf(languageRepository.findByName(LanguageName.ENG))
+                        user.languages = mutableListOf(languageRepository.findByName(LanguageEnum.ENG))
                         if (user.botState == BotState.CHANGE_LANG) {
                             user.botState = BotState.USER_MENU
                             userService.update(user)
@@ -458,7 +487,7 @@ class TelegramBot(
                         } else
                             sendContactRequest(
                                 user,
-                                languageUtil.contactButtonTxt(LanguageName.ENG)
+                                languageUtil.contactButtonTxt(LanguageEnum.ENG)
                             )
                     }
 
@@ -502,14 +531,24 @@ class TelegramBot(
             userService.update(user)
             val sender = userService.createOrTgUser(waitedMessages[0].senderChatId)
             getCloseOrCloseAndOff(user).let { connectingMessage ->
-                when {
-                    user.languages[0].name == LanguageName.ENG -> {
+
+                /*user.telegramId, messageSourceService.getMessage(
+                LocalizationTextKey.START_MESSAGING_MESSAGE,languageService.getLanguageOfUser(message.from.id)
+                )*/
+                val message =
+                    messageSourceService.getMessage(LocalizationTextKey.CONNECTED_TRUE, user.languages[0].name)
+                connectingMessage.text = sender.name + " " + message
+                execute(connectingMessage)
+                sendText(sender, user.name + " " + message)
+
+                /*when {
+                    user.languages[0].name == LanguageEnum.ENG -> {
                         connectingMessage.text = "You have contacted the " + sender.name
                         execute(connectingMessage)
                         sendText(sender, "You have contacted the " + user.name)
                     }
 
-                    user.languages[0].name == LanguageName.RU -> {
+                    user.languages[0].name == LanguageEnum.RU -> {
                         connectingMessage.text = "вы связались с " + sender.name
                         execute(connectingMessage)
                         sendText(sender, "вы связались с " + user.name)
@@ -520,7 +559,7 @@ class TelegramBot(
                         execute(connectingMessage)
                         sendText(sender, "Siz " + user.name + " bilan bog'landingiz")
                     }
-                }
+                }*/
             }
             for (waitedMessage in it) {
                 if (waitedMessage.attachment == null) {
@@ -692,20 +731,22 @@ class TelegramBot(
         inlineKeyboardMarkup.keyboard = rows
 
         val sendMessage = SendMessage()
-        var text = ""
-        if (session.sessionLanguage.name == LanguageName.UZ)
-            text = "Operatorni baholang 😀"
-        if (session.sessionLanguage.name == LanguageName.ENG)
-            text = "Rate the operator 😀"
-        if (session.sessionLanguage.name == LanguageName.RU)
-            text = "Оцените оператора 😀"
-        sendMessage.text = text
+        /*        messageSourceService.getMessage(LocalizationTextKey.RATE_THE_OPERATOR, session.sessionLanguage.name)
+                var text = ""
+                if (session.sessionLanguage.name == LanguageEnum.UZ)
+                    text = "Operatorni baholang 😀"
+                if (session.sessionLanguage.name == LanguageEnum.ENG)
+                    text = "Rate the operator 😀 "
+                if (session.sessionLanguage.name == LanguageEnum.RU)
+                    text = "Оцените оператора 😀"*/
+        sendMessage.text =
+            messageSourceService.getMessage(LocalizationTextKey.RATE_THE_OPERATOR, session.sessionLanguage.name)
         sendMessage.chatId = session.user.chatId
         sendMessage.replyMarkup = inlineKeyboardMarkup
         execute(sendMessage)
     }
 
-    private fun onlineOfflineMenu(user: User, userLang: LanguageName) {
+    private fun onlineOfflineMenu(user: User, userLang: LanguageEnum) {
         val sendMessage = SendMessage()
         val rows: MutableList<KeyboardRow> = mutableListOf()
 
@@ -737,8 +778,15 @@ class TelegramBot(
 
         val row1 = KeyboardRow()
 
-        val closeButton = KeyboardButton("CLOSE")
-        val closeAndOffButton = KeyboardButton("CLOSE AND OFF")
+        val sessionByOperator = messageService.getSessionByOperator(user.chatId)
+        val bt1 =
+            messageSourceService.getMessage(LocalizationTextKey.CLOSE_BT, sessionByOperator?.sessionLanguage?.name!!)
+        val bt2 = messageSourceService.getMessage(
+            LocalizationTextKey.CLOSE_AND_OFF_BT,
+            sessionByOperator.sessionLanguage.name
+        )
+        val closeButton = KeyboardButton(bt1)
+        val closeAndOffButton = KeyboardButton(bt2)
 
         row1.add(closeButton)
         row1.add(closeAndOffButton)
@@ -809,19 +857,20 @@ class TelegramBot(
         var text = "\uD83C\uDDFA\uD83C\uDDFFAssalomu alaykum $name!\n" +
                 "Botga xush kelibsiz. Iltimos tilni tanlang"
         if (user.botState == BotState.CHANGE_LANG) {
-            text = when (user.languages[0].name) {
-                LanguageName.UZ -> {
-                    "Til tanlang"
-                }
-
-                LanguageName.RU -> {
-                    "Выберите язык"
-                }
-
-                LanguageName.ENG -> {
-                    "Choose a language"
-                }
-            }
+            text = messageSourceService.getMessage(LocalizationTextKey.CHANGE_LANGUAGE, user.languages[0].name)
+//            text = when (user.languages[0].name) {
+//                LanguageEnum.UZ -> {
+//                    "Til tanlang"
+//                }
+//
+//                LanguageEnum.RU -> {
+//                    "Выберите язык"
+//                }
+//
+//                LanguageEnum.ENG -> {
+//                    "Choose a language"
+//                }
+//            }
         }
         sendMessage.text = text
         sendMessage.chatId = user.chatId

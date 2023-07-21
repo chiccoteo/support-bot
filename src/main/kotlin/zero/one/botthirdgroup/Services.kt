@@ -1,6 +1,7 @@
 package zero.one.botthirdgroup
 
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.support.ResourceBundleMessageSource
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -49,6 +50,11 @@ interface SessionService {
 
 }
 
+interface MessageSourceService {
+    fun getMessage(sourceKey: LocalizationTextKey, languageEnum: LanguageEnum): String
+    fun getMessage(sourceKey: LocalizationTextKey, any: Array<String>, languageEnum: LanguageEnum): String
+}
+
 @Service
 class SessionServiceImpl(
     private val sessionRepo: SessionRepository,
@@ -69,6 +75,7 @@ class SessionServiceImpl(
 class UserServiceImpl(
     private val userRepository: UserRepository,
     private val languageRepository: LanguageRepository,
+    private val messageSourceService: MessageSourceService
 ) : UserService {
 
     @Value("\${telegram.bot.token}")
@@ -79,7 +86,7 @@ class UserServiceImpl(
             ?: userRepository.save(
                 User(
                     chatId,
-                    mutableListOf(languageRepository.findByName(LanguageName.UZ))
+                    mutableListOf(languageRepository.findByName(LanguageEnum.UZ))
                 )
             )
     }
@@ -115,12 +122,19 @@ class UserServiceImpl(
         user.botState = BotState.OFFLINE
         userRepository.save(user)
 
-
+        val message =
+            messageSourceService.getMessage(LocalizationTextKey.CLICK_THE_START_COMMAND, user.languages[0].name)
         val restTemplate = RestTemplate()
+        restTemplate.getForObject(
+            "https://api.telegram.org/bot$token/sendMessage?chat_id=${user.chatId}&text=" + message + " /start",
+            String::class.java
+        )
+
+        /*val restTemplate = RestTemplate()
         restTemplate.getForObject(
             "https://api.telegram.org/bot$token/sendMessage?chat_id=${user.chatId}&text=Siz operator qilib tayinlandingiz. Iltimos /start buyrug'ini bosing",
             String::class.java
-        )
+        )*/
     }
 
     override fun updateLang(dto: LanguageUpdateDTO) {
@@ -335,4 +349,16 @@ class MessageServiceImpl(
         return false
     }
 
+}
+
+@Service
+class MessageSourceServiceImpl(val messageResourceBundleMessageSource: ResourceBundleMessageSource) :
+    MessageSourceService {
+    override fun getMessage(sourceKey: LocalizationTextKey, languageEnum: LanguageEnum): String {
+        return messageResourceBundleMessageSource.getMessage(sourceKey.name, null, languageEnum.toLocale())
+    }
+
+    override fun getMessage(sourceKey: LocalizationTextKey, any: Array<String>, languageEnum: LanguageEnum): String {
+        return messageResourceBundleMessageSource.getMessage(sourceKey.name, any, languageEnum.toLocale())
+    }
 }

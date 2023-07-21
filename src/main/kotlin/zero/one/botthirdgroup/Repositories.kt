@@ -50,7 +50,7 @@ interface UserRepository : BaseRepository<User> {
 }
 
 interface LanguageRepository : BaseRepository<Language> {
-    fun findByName(name: LanguageName): Language
+    fun findByName(name: LanguageEnum): Language
 }
 
 interface SessionRepository : BaseRepository<Session> {
