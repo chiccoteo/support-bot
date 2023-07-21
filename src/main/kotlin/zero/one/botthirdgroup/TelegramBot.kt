@@ -873,10 +873,5 @@ class TelegramBot(
     fun getFromTelegram(fileId: String, token: String) = execute(GetFile(fileId)).run {
         RestTemplate().getForObject<ByteArray>("https://api.telegram.org/file/bot${token}/${filePath}")
     }
-
-
-    fun sendNotificationToOperator(chatId: String) {
-
-
-    }
+    
 }
