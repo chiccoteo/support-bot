@@ -1,12 +1,10 @@
 package zero.one.botthirdgroup
 
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.context.annotation.Lazy
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
-import org.springframework.web.client.getForObject
 import zero.one.botthirdgroup.MessageDTO.Companion.toDTO
 import java.util.LinkedList
 
@@ -58,7 +56,7 @@ class SessionServiceImpl(
 ) : SessionService {
     override fun getOperatorAvgRate(): List<GetOperatorAvgRateDTO> {
         val list = sessionRepo.getOperatorAvgRate()
-        var response = LinkedList<GetOperatorAvgRateDTO>()
+        val response = LinkedList<GetOperatorAvgRateDTO>()
         for (operatorAvgRateMapper in list) {
             val operator = userRepository.findByIdAndDeletedFalse(operatorAvgRateMapper.getOperatorId())
             response.add(GetOperatorAvgRateDTO(operator!!, operatorAvgRateMapper.getAvgRate()))

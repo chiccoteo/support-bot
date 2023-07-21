@@ -13,7 +13,6 @@ class BaseEntity(
 @Entity(name = "users")
 class User(
     var name: String?,
-    var username: String?,
     var phoneNumber: String?,
     var chatId: String,
     @Enumerated(EnumType.STRING) var role: Role = Role.USER,
@@ -21,7 +20,7 @@ class User(
     @Enumerated(EnumType.STRING) var botState: BotState = BotState.START,
 ) : BaseEntity() {
     constructor(chatId: String, languages: MutableList<Language>) : this(
-        null, null, null, chatId, Role.USER, languages
+        null, null, chatId, Role.USER, languages
     )
 
 }

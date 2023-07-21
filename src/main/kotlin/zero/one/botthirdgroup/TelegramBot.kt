@@ -1,8 +1,6 @@
 package zero.one.botthirdgroup
 
-import org.apache.logging.log4j.message.TimestampMessage
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.context.annotation.Bean
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForObject
@@ -55,30 +53,7 @@ class TelegramBot(
             val userLang: LanguageName = user.languages[0].name
             if (message.hasText()) {
                 val text = message.text
-
-                println(message)
-                println(message.isReply)
-
-                val replyToMessage = message.replyToMessage
-
-
-
                 if (text.equals("/start")) {
-
-
-//                    val execute = execute(SendMessage(user.chatId, "Salom"))
-//
-//                    val sendMessage = SendMessage(user.chatId, "Alik")
-//                    sendMessage.replyToMessageId = execute.messageId
-//                    execute(sendMessage)
-
-
-                    println(message)
-
-//                    val message1 = Message()
-//                    message1.replyToMessage = Message()
-
-
                     if (user.role == Role.OPERATOR) {
                         if (user.botState != BotState.SESSION)
                             onlineOfflineMenu(user, userLang)
@@ -104,9 +79,7 @@ class TelegramBot(
                             else -> {}
                         }
                     }
-                }
-
-                if (user.botState == BotState.RATING) {
+                } else if (user.botState == BotState.RATING) {
                     rateOperator(messageService.isThereNotRatedSession(update.getChatId()))
                     messageService.closingSession(update.getChatId())
                 }
@@ -199,7 +172,7 @@ class TelegramBot(
                 }
 
                 // Sending messages for Operator
-                if (user.botState == BotState.SESSION) {
+                else if (user.botState == BotState.SESSION) {
                     if (text.equals("CLOSE") || text.equals("CLOSE AND OFF")) {
                         if (text.equals("CLOSE")) {
                             val session = messageService.getSessionByOperator(update.getChatId())!!
@@ -277,6 +250,7 @@ class TelegramBot(
                         it.toChatId.toString(),
                         InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
                     )
+                    sendPhoto.caption = it.text
                     sendPhoto.replyToMessageId = getReplyToMessageId(it)
                     it.executeTelegramMessageId = execute(sendPhoto).messageId
                     messageService.update(it.telegramMessageId, it.executeTelegramMessageId!!)
@@ -308,18 +282,10 @@ class TelegramBot(
                 }
             } else if (message.hasSticker()) {
                 val sticker = message.sticker
-
-                println(sticker)
-
-
                 var stickerType = "";
-
                 stickerType = if (sticker.isAnimated) "apng"
                 else "webp"
-
-
                 val attachment = create(sticker.fileId, "sticker.$stickerType", AttachmentContentType.STICKER)
-
                 val messageDTO = messageService.create(
                     MessageDTO(
                         message.messageId,
@@ -333,14 +299,14 @@ class TelegramBot(
                         MessageContentType.STICKER
                     )
                 )
-
                 messageDTO?.let {
-                    execute(
-                        SendSticker(
-                            it.toChatId.toString(),
-                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
-                        )
+                    val sendSticker = SendSticker(
+                        it.toChatId.toString(),
+                        InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
                     )
+                    sendSticker.replyToMessageId = getReplyToMessageId(it)
+                    it.executeTelegramMessageId = execute(sendSticker).messageId
+                    messageService.update(it.telegramMessageId, it.executeTelegramMessageId!!)
                 }
 
             } else if (message.hasVideo()) {
@@ -640,7 +606,16 @@ class TelegramBot(
                             }
 
                             AttachmentContentType.STICKER -> {
-
+                                val sendSticker = SendSticker(
+                                    waitedMessage.toChatId.toString(),
+                                    InputFile(File(attachment.pathName))
+                                )
+                                sendSticker.replyToMessageId = replyToMessageId
+                                waitedMessage.executeTelegramMessageId = execute(sendSticker).messageId
+                                messageService.update(
+                                    waitedMessage.telegramMessageId,
+                                    waitedMessage.executeTelegramMessageId!!
+                                )
                             }
                         }
                     }
@@ -648,6 +623,7 @@ class TelegramBot(
             }
         }
     }
+
 
     private fun getReplyMessageTgId(message: Message): Int? {
         return if (message.isReply)
@@ -898,7 +874,6 @@ class TelegramBot(
 
 
     fun sendNotificationToOperator(chatId: String) {
-
 
 
     }
