@@ -7,6 +7,7 @@ import org.springframework.web.client.getForObject
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.GetFile
 import org.telegram.telegrambots.meta.api.methods.send.*
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.objects.Contact
 import org.telegram.telegrambots.meta.api.objects.InputFile
 import org.telegram.telegrambots.meta.api.objects.Message
@@ -31,7 +32,7 @@ class TelegramBot(
     private val languageUtil: LanguageUtil,
     private val languageRepository: LanguageRepository,
     private val messageService: MessageService,
-    private val attachmentRepo: AttachmentRepository
+    private val attachmentRepo: AttachmentRepository,
 ) : TelegramLongPollingBot() {
 
     @Value("\${telegram.bot.username}")
@@ -223,6 +224,7 @@ class TelegramBot(
                 if (user.botState == BotState.SHARE_CONTACT) {
                     val contact = message.contact
                     if (message.from.id == contact.userId) {
+//                        execute(DeleteMessage(update.getChatId(), message.messageId))
                         getContact(user, contact)
                     } else {
                         sendText(user, "Iltimos share contact")
@@ -415,6 +417,7 @@ class TelegramBot(
         } else if (update.hasCallbackQuery()) {
             val data = update.callbackQuery.data
             execute(DeleteMessage(update.getChatId(), update.callbackQuery.message.messageId))
+
             if (user.botState == BotState.START || user.botState == BotState.CHANGE_LANG) {
                 if (user.botState == BotState.START) {
                     user.botState = BotState.CHOOSE_LANG
@@ -636,7 +639,6 @@ class TelegramBot(
 
     private fun getContact(tgUser: User, contact: Contact) {
         val phoneNumber = contact.phoneNumber
-//        tgUser.name = contact.firstName + " " + contact.lastName
         contact.run {
             tgUser.name = ""
             firstName?.let { tgUser.name += firstName }
@@ -657,30 +659,29 @@ class TelegramBot(
         button.text = "1"
         button.callbackData = "1" + session.id
         row.add(button)
-        rows.add(row)
 
-        row = mutableListOf()
+
+
         button = InlineKeyboardButton()
         button.text = "2"
         button.callbackData = "2" + session.id
         row.add(button)
-        rows.add(row)
 
-        row = mutableListOf()
+
+
         button = InlineKeyboardButton()
         button.text = "3"
         button.callbackData = "3" + session.id
         row.add(button)
-        rows.add(row)
 
-        row = mutableListOf()
+
+
         button = InlineKeyboardButton()
         button.text = "4"
         button.callbackData = "4" + session.id
         row.add(button)
-        rows.add(row)
 
-        row = mutableListOf()
+
         button = InlineKeyboardButton()
         button.text = "5"
         button.callbackData = "5" + session.id
@@ -789,17 +790,15 @@ class TelegramBot(
         button.callbackData = "UZ"
 
         row.add(button)
-        rows.add(row)
+
 
         button = InlineKeyboardButton()
-        row = mutableListOf()
         button.text = "RU \uD83C\uDDF7\uD83C\uDDFA"
         button.callbackData = "RU"
         row.add(button)
-        rows.add(row)
+
 
         button = InlineKeyboardButton()
-        row = mutableListOf()
         button.text = "ENG \uD83C\uDDFA\uD83C\uDDF8"
         button.callbackData = "ENG"
         row.add(button)
@@ -873,5 +872,5 @@ class TelegramBot(
     fun getFromTelegram(fileId: String, token: String) = execute(GetFile(fileId)).run {
         RestTemplate().getForObject<ByteArray>("https://api.telegram.org/file/bot${token}/${filePath}")
     }
-    
+
 }
