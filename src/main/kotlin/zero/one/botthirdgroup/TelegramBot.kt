@@ -290,7 +290,7 @@ class TelegramBot(
                 val messageDTO = messageService.create(
                     MessageDTO(
                         message.messageId,
-                        null,
+                        getReplyMessageTgId(message),
                         null,
                         Timestamp(System.currentTimeMillis()),
                         user.chatId,
@@ -477,8 +477,10 @@ class TelegramBot(
     private fun sendMessage(messageDTO: MessageDTO, userChatId: String) {
         val sendMessage = SendMessage()
         if (messageDTO.replyTelegramMessageId != null) {
-            sendMessage.replyToMessageId =
-                messageService.getReplyMessageId(messageDTO.replyTelegramMessageId)
+            val replyMessageId = messageService.getReplyMessageId(messageDTO.replyTelegramMessageId)
+            // replyMessageId will be null if this message does not exist in database
+            if (replyMessageId != null)
+                sendMessage.replyToMessageId = replyMessageId
         }
         sendMessage.text = messageDTO.text.toString()
         sendMessage.chatId = userChatId

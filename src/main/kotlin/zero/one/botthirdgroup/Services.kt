@@ -22,7 +22,7 @@ interface MessageService {
 
     fun update(messageId: Int, executeMessageId: Int)
 
-    fun getReplyMessageId(messageId: Int): Int
+    fun getReplyMessageId(messageId: Int): Int?
 
     fun create(messageDTO: MessageDTO): MessageDTO?
 
@@ -146,13 +146,14 @@ class MessageServiceImpl(
         }
     }
 
-    override fun getReplyMessageId(messageId: Int): Int {
+    override fun getReplyMessageId(messageId: Int): Int? {
         messageRepo.findByTelegramMessageIdAndDeletedFalse(messageId)?.executeTelegramMessageId?.let {
             return it
         }
-        messageRepo.findByExecuteTelegramMessageIdAndDeletedFalse(messageId)?.telegramMessageId.let {
-            return it!!
+        messageRepo.findByExecuteTelegramMessageIdAndDeletedFalse(messageId)?.telegramMessageId?.let {
+            return it
         }
+        return null
     }
 
     override fun create(messageDTO: MessageDTO): MessageDTO? {
