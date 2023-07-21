@@ -1,9 +1,6 @@
 package zero.one.botthirdgroup
 
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.cglib.core.Local
-import org.springframework.context.annotation.Lazy
-import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.context.support.ResourceBundleMessageSource
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -11,7 +8,6 @@ import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import zero.one.botthirdgroup.MessageDTO.Companion.toDTO
 import java.util.LinkedList
-import java.util.Locale
 
 interface UserService {
     fun createOrTgUser(chatId: String): User
@@ -79,6 +75,7 @@ class SessionServiceImpl(
 class UserServiceImpl(
     private val userRepository: UserRepository,
     private val languageRepository: LanguageRepository,
+    private val messageSourceService: MessageSourceService
 ) : UserService {
 
     @Value("\${telegram.bot.token}")
@@ -125,12 +122,19 @@ class UserServiceImpl(
         user.botState = BotState.OFFLINE
         userRepository.save(user)
 
-
+        val message =
+            messageSourceService.getMessage(LocalizationTextKey.CLICK_THE_START_COMMAND, user.languages[0].name)
         val restTemplate = RestTemplate()
+        restTemplate.getForObject(
+            "https://api.telegram.org/bot$token/sendMessage?chat_id=${user.chatId}&text=" + message + " /start",
+            String::class.java
+        )
+
+        /*val restTemplate = RestTemplate()
         restTemplate.getForObject(
             "https://api.telegram.org/bot$token/sendMessage?chat_id=${user.chatId}&text=Siz operator qilib tayinlandingiz. Iltimos /start buyrug'ini bosing",
             String::class.java
-        )
+        )*/
     }
 
     override fun updateLang(dto: LanguageUpdateDTO) {

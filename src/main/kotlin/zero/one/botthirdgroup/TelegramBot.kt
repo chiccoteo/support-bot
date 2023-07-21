@@ -139,12 +139,24 @@ class TelegramBot(
                         val tgUser = userService.createOrTgUser(create.toChatId.toString())
                         if (messageService.isThereOneMessageInSession(update.getChatId())) {
                             val connectingMessage: SendMessage
+                            val message: String =
+                                messageSourceService.getMessage(
+                                    LocalizationTextKey.CONNECTED_TRUE,
+                                    user.languages[0].name
+                                )
                             getCloseOrCloseAndOff(tgUser).let {
-                                it.text = "Siz " + user.name + " bilan bog'landingiz"
+                                it.text = message + " " + user.name
                                 connectingMessage = it
                             }
                             execute(connectingMessage)
-                            sendText(user, "Siz " + tgUser.name + " bilan bog'landingiz")
+                            sendText(user, message + " " + tgUser.name)
+                            /*                            getCloseOrCloseAndOff(tgUser).let {
+                                                            it.text = "Siz " + user.name + " bilan bog'landingiz"
+                                                            connectingMessage = it
+                                                        }
+                                                        execute(connectingMessage)
+                                                       sendText(user, "Siz " + tgUser.name + " bilan bog'landingiz")
+                                      */
                         }
                         sendMessage(create, tgUser.chatId)
                         tgUser.botState = BotState.SESSION
@@ -175,8 +187,18 @@ class TelegramBot(
 
                 // Sending messages for Operator
                 else if (user.botState == BotState.SESSION) {
-                    if (text.equals("CLOSE") || text.equals("CLOSE AND OFF")) {
-                        if (text.equals("CLOSE")) {
+                    val sessionByOperator = messageService.getSessionByOperator(user.chatId)
+                    val close = messageSourceService.getMessage(
+                        LocalizationTextKey.CLOSE_BT,
+                        sessionByOperator?.sessionLanguage?.name!!
+                    )
+                    val closeAndOff =
+                        messageSourceService.getMessage(
+                            LocalizationTextKey.CLOSE_AND_OFF_BT,
+                            sessionByOperator.sessionLanguage.name
+                        )
+                    if (text.equals(close) || text.equals(closeAndOff)) {
+                        if (text.equals(close)) {
                             val session = messageService.getSessionByOperator(update.getChatId())!!
                             rateOperator(session)
                             messageService.closingSession(update.getChatId())
@@ -707,14 +729,14 @@ class TelegramBot(
         inlineKeyboardMarkup.keyboard = rows
 
         val sendMessage = SendMessage()
-//        messageSourceService.getMessage(LocalizationTextKey.RATE_THE_OPERATOR, session.sessionLanguage.name)
-//        var text = ""
-//        if (session.sessionLanguage.name == LanguageEnum.UZ)
-//            text = "Operatorni baholang 😀"
-//        if (session.sessionLanguage.name == LanguageEnum.ENG)
-//            text = "Rate the operator 😀"
-//        if (session.sessionLanguage.name == LanguageEnum.RU)
-//            text = "Оцените оператора 😀"
+        /*        messageSourceService.getMessage(LocalizationTextKey.RATE_THE_OPERATOR, session.sessionLanguage.name)
+                var text = ""
+                if (session.sessionLanguage.name == LanguageEnum.UZ)
+                    text = "Operatorni baholang 😀"
+                if (session.sessionLanguage.name == LanguageEnum.ENG)
+                    text = "Rate the operator 😀 "
+                if (session.sessionLanguage.name == LanguageEnum.RU)
+                    text = "Оцените оператора 😀"*/
         sendMessage.text =
             messageSourceService.getMessage(LocalizationTextKey.RATE_THE_OPERATOR, session.sessionLanguage.name)
         sendMessage.chatId = session.user.chatId
@@ -754,8 +776,15 @@ class TelegramBot(
 
         val row1 = KeyboardRow()
 
-        val closeButton = KeyboardButton("CLOSE")
-        val closeAndOffButton = KeyboardButton("CLOSE AND OFF")
+        val sessionByOperator = messageService.getSessionByOperator(user.chatId)
+        val bt1 =
+            messageSourceService.getMessage(LocalizationTextKey.CLOSE_BT, sessionByOperator?.sessionLanguage?.name!!)
+        val bt2 = messageSourceService.getMessage(
+            LocalizationTextKey.CLOSE_AND_OFF_BT,
+            sessionByOperator.sessionLanguage.name
+        )
+        val closeButton = KeyboardButton(bt1)
+        val closeAndOffButton = KeyboardButton(bt2)
 
         row1.add(closeButton)
         row1.add(closeAndOffButton)
