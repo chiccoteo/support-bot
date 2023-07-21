@@ -1,14 +1,13 @@
 package zero.one.botthirdgroup
 
-import org.apache.logging.log4j.message.TimestampMessage
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.context.annotation.Bean
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForObject
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.GetFile
 import org.telegram.telegrambots.meta.api.methods.send.*
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.objects.Contact
 import org.telegram.telegrambots.meta.api.objects.InputFile
 import org.telegram.telegrambots.meta.api.objects.Message
@@ -56,30 +55,7 @@ class TelegramBot(
             val userLang: LanguageEnum = user.languages[0].name
             if (message.hasText()) {
                 val text = message.text
-
-                println(message)
-                println(message.isReply)
-
-                val replyToMessage = message.replyToMessage
-
-
-
                 if (text.equals("/start")) {
-
-
-//                    val execute = execute(SendMessage(user.chatId, "Salom"))
-//
-//                    val sendMessage = SendMessage(user.chatId, "Alik")
-//                    sendMessage.replyToMessageId = execute.messageId
-//                    execute(sendMessage)
-
-
-                    println(message)
-
-//                    val message1 = Message()
-//                    message1.replyToMessage = Message()
-
-
                     if (user.role == Role.OPERATOR) {
                         if (user.botState != BotState.SESSION)
                             onlineOfflineMenu(user, userLang)
@@ -105,9 +81,7 @@ class TelegramBot(
                             else -> {}
                         }
                     }
-                }
-
-                if (user.botState == BotState.RATING) {
+                } else if (user.botState == BotState.RATING) {
                     rateOperator(messageService.isThereNotRatedSession(update.getChatId()))
                     messageService.closingSession(update.getChatId())
                 }
@@ -155,6 +129,7 @@ class TelegramBot(
                         MessageDTO(
                             message.messageId,
                             getReplyMessageTgId(message),
+                            null,
                             Timestamp(System.currentTimeMillis()),
                             user.chatId, null, text, null,
                             MessageContentType.TEXT
@@ -171,10 +146,7 @@ class TelegramBot(
                             execute(connectingMessage)
                             sendText(user, "Siz " + tgUser.name + " bilan bog'landingiz")
                         }
-                        val sendMessage = SendMessage()
-                        sendMessage.text = create.text.toString()
-                        sendMessage.chatId = tgUser.chatId
-                        execute(sendMessage)
+                        sendMessage(create, tgUser.chatId)
                         tgUser.botState = BotState.SESSION
                         userService.update(tgUser)
                     }
@@ -188,108 +160,6 @@ class TelegramBot(
                             messageService.getWaitedMessages(user.chatId)?.let {
                                 executeWaitedMessages(it, user)
                             }
-                            /*waitedMessages?.let {
-                                // session open now
-                                user.botState = BotState.SESSION
-                                userService.update(user)
-                                val sender = userService.createOrTgUser(waitedMessages[0].senderChatId)
-                                getCloseOrCloseAndOff(user).let { connectingMessage ->
-                                    if (user.languages[0].name == LanguageEnum.ENG) {
-                                        connectingMessage.text = "You have contacted the " + sender.name
-                                        execute(connectingMessage)
-                                        sendText(sender, "You have contacted the " + user.name)
-                                    } else if (user.languages[0].name == LanguageEnum.UZ) {
-                                        connectingMessage.text = "Siz " + sender.name + " bilan bog'landingiz"
-                                        execute(connectingMessage)
-                                        sendText(sender, "Siz " + user.name + " bilan bog'landingiz")
-                                    } else {
-                                        connectingMessage.text = "вы связались с " + sender.name
-                                        execute(connectingMessage)
-                                        sendText(sender, "вы связались с " + user.name)
-                                    }
-                                }
-                                for (waitedMessage in it) {
-
-
-                                    if (waitedMessage.attachment == null) {
-                                        waitedMessage.run {
-                                            this.text?.let { text ->
-                                                sendText(
-                                                    userService.createOrTgUser(this.toChatId.toString()),
-                                                    text
-                                                )
-                                            }
-                                        }
-                                    } else {
-                                        waitedMessage.attachment.let { attachment ->
-                                            when (attachment.contentType) {
-                                                AttachmentContentType.PHOTO -> {
-                                                    execute(
-                                                        SendPhoto(
-                                                            waitedMessage.toChatId.toString(),
-                                                            InputFile(File(attachment.pathName))
-                                                        )
-                                                    )
-                                                }
-
-                                                AttachmentContentType.DOCUMENT -> {
-                                                    execute(
-                                                        SendDocument(
-                                                            waitedMessage.toChatId.toString(),
-                                                            InputFile(File(attachment.pathName))
-                                                        )
-                                                    )
-                                                }
-
-                                                AttachmentContentType.VIDEO -> {
-                                                    execute(
-                                                        SendVideo(
-                                                            waitedMessage.toChatId.toString(),
-                                                            InputFile(File(attachment.pathName))
-                                                        )
-                                                    )
-                                                }
-
-                                                AttachmentContentType.AUDIO -> {
-                                                    execute(
-                                                        SendAudio(
-                                                            waitedMessage.toChatId.toString(),
-                                                            InputFile(File(attachment.pathName))
-                                                        )
-                                                    )
-                                                }
-
-                                                AttachmentContentType.VIDEO_NOTE -> {
-                                                    execute(
-                                                        SendVideoNote(
-                                                            waitedMessage.toChatId.toString(),
-                                                            InputFile(File(attachment.pathName))
-                                                        )
-                                                    )
-                                                }
-
-                                                AttachmentContentType.VOICE -> {
-                                                    execute(
-                                                        SendVoice(
-                                                            waitedMessage.toChatId.toString(),
-                                                            InputFile(File(attachment.pathName))
-                                                        )
-                                                    )
-                                                }
-
-                                                AttachmentContentType.STICKER -> {
-                                                    execute(
-                                                        SendSticker(
-                                                            waitedMessage.toChatId.toString(),
-                                                            InputFile(File(attachment.pathName))
-                                                        )
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }*/
                             if (user.botState != BotState.SESSION)
                                 onlineOfflineMenu(user, userLang)
                         }
@@ -304,7 +174,7 @@ class TelegramBot(
                 }
 
                 // Sending messages for Operator
-                if (user.botState == BotState.SESSION) {
+                else if (user.botState == BotState.SESSION) {
                     if (text.equals("CLOSE") || text.equals("CLOSE AND OFF")) {
                         if (text.equals("CLOSE")) {
                             val session = messageService.getSessionByOperator(update.getChatId())!!
@@ -339,6 +209,7 @@ class TelegramBot(
                             MessageDTO(
                                 message.messageId,
                                 getReplyMessageTgId(message),
+                                null,
                                 Timestamp(System.currentTimeMillis()),
                                 user.chatId,
                                 null,
@@ -347,18 +218,14 @@ class TelegramBot(
                                 MessageContentType.TEXT
                             )
                         )
-
-                        create?.let {
-                            val tgUser = userService.createOrTgUser(it.toChatId.toString())
-                            sendText(tgUser, it.text.toString())
-                        }
+                        sendMessage(create!!, create.toChatId!!)
                     }
                 }
             } else if (message.hasContact()) {
                 if (user.botState == BotState.SHARE_CONTACT) {
                     val contact = message.contact
-                    println("" + contact.userId + "," + message.from.id)
                     if (message.from.id == contact.userId) {
+//                        execute(DeleteMessage(update.getChatId(), message.messageId))
                         getContact(user, contact)
                     } else {
                         sendText(
@@ -372,12 +239,13 @@ class TelegramBot(
 
                 }
             } else if (message.hasPhoto()) {
-                val photo = message.photo.first()
+                val photo = message.photo.last()
                 val create = create(photo.fileId, "asd.png", AttachmentContentType.PHOTO)
                 val messageDTO = messageService.create(
                     MessageDTO(
                         message.messageId,
                         getReplyMessageTgId(message),
+                        null,
                         Timestamp(System.currentTimeMillis()),
                         user.chatId,
                         null,
@@ -387,12 +255,14 @@ class TelegramBot(
                     )
                 )
                 messageDTO?.let {
-                    execute(
-                        SendPhoto(
-                            it.toChatId.toString(),
-                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
-                        )
+                    val sendPhoto = SendPhoto(
+                        it.toChatId.toString(),
+                        InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
                     )
+                    sendPhoto.caption = it.text
+                    sendPhoto.replyToMessageId = getReplyToMessageId(it)
+                    it.executeTelegramMessageId = execute(sendPhoto).messageId
+                    messageService.update(it.telegramMessageId, it.executeTelegramMessageId!!)
                 }
             } else if (message.hasDocument()) {
                 val document = message.document
@@ -401,6 +271,7 @@ class TelegramBot(
                     MessageDTO(
                         message.messageId,
                         getReplyMessageTgId(message),
+                        null,
                         Timestamp(System.currentTimeMillis()),
                         user.chatId,
                         null,
@@ -410,30 +281,24 @@ class TelegramBot(
                     )
                 )
                 messageDTO?.let {
-                    execute(
-                        SendDocument(
-                            it.toChatId.toString(),
-                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
-                        )
+                    val sendDocument = SendDocument(
+                        it.toChatId.toString(),
+                        InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
                     )
+                    sendDocument.replyToMessageId = getReplyToMessageId(it)
+                    it.executeTelegramMessageId = execute(sendDocument).messageId
+                    messageService.update(it.telegramMessageId, it.executeTelegramMessageId!!)
                 }
             } else if (message.hasSticker()) {
                 val sticker = message.sticker
-
-                println(sticker)
-
-
                 var stickerType = "";
-
                 stickerType = if (sticker.isAnimated) "apng"
                 else "webp"
-
-
                 val attachment = create(sticker.fileId, "sticker.$stickerType", AttachmentContentType.STICKER)
-
                 val messageDTO = messageService.create(
                     MessageDTO(
                         message.messageId,
+                        null,
                         null,
                         Timestamp(System.currentTimeMillis()),
                         user.chatId,
@@ -443,14 +308,14 @@ class TelegramBot(
                         MessageContentType.STICKER
                     )
                 )
-
                 messageDTO?.let {
-                    execute(
-                        SendSticker(
-                            it.toChatId.toString(),
-                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
-                        )
+                    val sendSticker = SendSticker(
+                        it.toChatId.toString(),
+                        InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
                     )
+                    sendSticker.replyToMessageId = getReplyToMessageId(it)
+                    it.executeTelegramMessageId = execute(sendSticker).messageId
+                    messageService.update(it.telegramMessageId, it.executeTelegramMessageId!!)
                 }
 
             } else if (message.hasVideo()) {
@@ -460,6 +325,7 @@ class TelegramBot(
                     MessageDTO(
                         message.messageId,
                         getReplyMessageTgId(message),
+                        null,
                         Timestamp(System.currentTimeMillis()),
                         user.chatId,
                         null,
@@ -469,12 +335,13 @@ class TelegramBot(
                     )
                 )
                 messageDTO?.let {
-                    execute(
-                        SendVideo(
-                            it.toChatId.toString(),
-                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
-                        )
+                    val sendVideo = SendVideo(
+                        it.toChatId.toString(),
+                        InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
                     )
+                    sendVideo.replyToMessageId = getReplyToMessageId(it)
+                    it.executeTelegramMessageId = execute(sendVideo).messageId
+                    messageService.update(it.telegramMessageId, it.executeTelegramMessageId!!)
                 }
             } else if (message.hasAudio()) {
                 val audio = message.audio
@@ -483,6 +350,7 @@ class TelegramBot(
                     MessageDTO(
                         message.messageId,
                         getReplyMessageTgId(message),
+                        null,
                         Timestamp(System.currentTimeMillis()),
                         user.chatId,
                         null,
@@ -492,12 +360,13 @@ class TelegramBot(
                     )
                 )
                 messageDTO?.let {
-                    execute(
-                        SendAudio(
-                            it.toChatId.toString(),
-                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
-                        )
+                    val sendAudio = SendAudio(
+                        it.toChatId.toString(),
+                        InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
                     )
+                    sendAudio.replyToMessageId = getReplyToMessageId(it)
+                    it.executeTelegramMessageId = execute(sendAudio).messageId
+                    messageService.update(it.telegramMessageId, it.executeTelegramMessageId!!)
                 }
 
             } else if (message.hasVoice()) {
@@ -507,6 +376,7 @@ class TelegramBot(
                     MessageDTO(
                         message.messageId,
                         getReplyMessageTgId(message),
+                        null,
                         Timestamp(System.currentTimeMillis()),
                         user.chatId,
                         null,
@@ -516,12 +386,13 @@ class TelegramBot(
                     )
                 )
                 messageDTO?.let {
-                    execute(
-                        SendVoice(
-                            it.toChatId.toString(),
-                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
-                        )
+                    val sendVoice = SendVoice(
+                        it.toChatId.toString(),
+                        InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
                     )
+                    sendVoice.replyToMessageId = getReplyToMessageId(it)
+                    it.executeTelegramMessageId = execute(sendVoice).messageId
+                    messageService.update(it.telegramMessageId, it.executeTelegramMessageId!!)
                 }
             } else if (message.hasVideoNote()) {
                 val videoNote = message.videoNote
@@ -530,6 +401,7 @@ class TelegramBot(
                     MessageDTO(
                         message.messageId,
                         getReplyMessageTgId(message),
+                        null,
                         Timestamp(System.currentTimeMillis()),
                         user.chatId,
                         null,
@@ -539,18 +411,21 @@ class TelegramBot(
                     )
                 )
                 messageDTO?.let {
-                    execute(
-                        SendVideoNote(
-                            it.toChatId.toString(),
-                            InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
-                        )
+                    val sendVideoNote = SendVideoNote(
+                        it.toChatId.toString(),
+                        InputFile(it.attachment?.pathName?.let { it1 -> File(it1) })
                     )
+                    sendVideoNote.replyToMessageId = getReplyToMessageId(it)
+                    it.executeTelegramMessageId = execute(sendVideoNote).messageId
+                    messageService.update(it.telegramMessageId, it.executeTelegramMessageId!!)
                 }
             }
 
         } else if (update.hasCallbackQuery()) {
             val data = update.callbackQuery.data
+            val deletingMessageId = update.callbackQuery.message.messageId
             if (user.botState == BotState.START || user.botState == BotState.CHANGE_LANG) {
+                execute(DeleteMessage(update.getChatId(), deletingMessageId))
                 if (user.botState == BotState.START) {
                     user.botState = BotState.CHOOSE_LANG
                     userService.update(user)
@@ -599,11 +474,31 @@ class TelegramBot(
             }
             if (user.botState == BotState.RATING) {
                 messageService.ratingOperator(data.substring(1).toLong(), data.substring(0, 1).toByte())
+                execute(DeleteMessage(update.getChatId(), deletingMessageId))
                 user.botState = BotState.USER_MENU
                 userService.update(user)
                 userMenu(user)
             }
         }
+    }
+
+    private fun sendMessage(messageDTO: MessageDTO, userChatId: String) {
+        val sendMessage = SendMessage()
+        if (messageDTO.replyTelegramMessageId != null) {
+            sendMessage.replyToMessageId =
+                messageService.getReplyMessageId(messageDTO.replyTelegramMessageId)
+        }
+        sendMessage.text = messageDTO.text.toString()
+        sendMessage.chatId = userChatId
+        messageDTO.executeTelegramMessageId = execute(sendMessage).messageId
+        messageService.update(messageDTO.telegramMessageId, messageDTO.executeTelegramMessageId!!)
+    }
+
+    private fun getReplyToMessageId(messageDTO: MessageDTO): Int? {
+        if (messageDTO.replyTelegramMessageId != null) {
+            return messageService.getReplyMessageId(messageDTO.replyTelegramMessageId)
+        }
+        return null
     }
 
     private fun executeWaitedMessages(waitedMessages: List<MessageDTO>, user: User) {
@@ -646,72 +541,103 @@ class TelegramBot(
             for (waitedMessage in it) {
                 if (waitedMessage.attachment == null) {
                     waitedMessage.run {
-                        this.text?.let { text ->
-                            sendText(
-                                userService.createOrTgUser(this.toChatId.toString()),
-                                text
-                            )
+                        this.text?.let {
+                            sendMessage(this, this.toChatId!!)
                         }
                     }
                 } else {
+                    val replyToMessageId = getReplyToMessageId(waitedMessage)
                     waitedMessage.attachment.let { attachment ->
                         when (attachment.contentType) {
                             AttachmentContentType.PHOTO -> {
-                                execute(
-                                    SendPhoto(
-                                        waitedMessage.toChatId.toString(),
-                                        InputFile(File(attachment.pathName))
-                                    )
+                                val sendPhoto = SendPhoto(
+                                    waitedMessage.toChatId.toString(),
+                                    InputFile(File(attachment.pathName))
+                                )
+                                sendPhoto.replyToMessageId = replyToMessageId
+                                waitedMessage.executeTelegramMessageId = execute(sendPhoto).messageId
+                                messageService.update(
+                                    waitedMessage.telegramMessageId,
+                                    waitedMessage.executeTelegramMessageId!!
                                 )
                             }
 
                             AttachmentContentType.DOCUMENT -> {
-                                execute(
-                                    SendDocument(
-                                        waitedMessage.toChatId.toString(),
-                                        InputFile(File(attachment.pathName))
-                                    )
+                                val sendDocument = SendDocument(
+                                    waitedMessage.toChatId.toString(),
+                                    InputFile(File(attachment.pathName))
+                                )
+                                sendDocument.replyToMessageId = replyToMessageId
+                                waitedMessage.executeTelegramMessageId = execute(sendDocument).messageId
+                                messageService.update(
+                                    waitedMessage.telegramMessageId,
+                                    waitedMessage.executeTelegramMessageId!!
                                 )
                             }
 
                             AttachmentContentType.VIDEO -> {
-                                execute(
-                                    SendVideo(
-                                        waitedMessage.toChatId.toString(),
-                                        InputFile(File(attachment.pathName))
-                                    )
+                                val sendVideo = SendVideo(
+                                    waitedMessage.toChatId.toString(),
+                                    InputFile(File(attachment.pathName))
+                                )
+                                sendVideo.replyToMessageId = replyToMessageId
+                                waitedMessage.executeTelegramMessageId = execute(sendVideo).messageId
+                                messageService.update(
+                                    waitedMessage.telegramMessageId,
+                                    waitedMessage.executeTelegramMessageId!!
                                 )
                             }
 
                             AttachmentContentType.AUDIO -> {
-                                execute(
-                                    SendAudio(
-                                        waitedMessage.toChatId.toString(),
-                                        InputFile(File(attachment.pathName))
-                                    )
+                                val sendAudio = SendAudio(
+                                    waitedMessage.toChatId.toString(),
+                                    InputFile(File(attachment.pathName))
+                                )
+                                sendAudio.replyToMessageId = replyToMessageId
+                                waitedMessage.executeTelegramMessageId = execute(sendAudio).messageId
+                                messageService.update(
+                                    waitedMessage.telegramMessageId,
+                                    waitedMessage.executeTelegramMessageId!!
                                 )
                             }
 
                             AttachmentContentType.VIDEO_NOTE -> {
-                                execute(
-                                    SendVideoNote(
-                                        waitedMessage.toChatId.toString(),
-                                        InputFile(File(attachment.pathName))
-                                    )
+                                val sendVideoNote = SendVideoNote(
+                                    waitedMessage.toChatId.toString(),
+                                    InputFile(File(attachment.pathName))
+                                )
+                                sendVideoNote.replyToMessageId = replyToMessageId
+                                waitedMessage.executeTelegramMessageId = execute(sendVideoNote).messageId
+                                messageService.update(
+                                    waitedMessage.telegramMessageId,
+                                    waitedMessage.executeTelegramMessageId!!
                                 )
                             }
 
                             AttachmentContentType.VOICE -> {
-                                execute(
-                                    SendVoice(
-                                        waitedMessage.toChatId.toString(),
-                                        InputFile(File(attachment.pathName))
-                                    )
+                                val sendVoice = SendVoice(
+                                    waitedMessage.toChatId.toString(),
+                                    InputFile(File(attachment.pathName))
+                                )
+                                sendVoice.replyToMessageId = replyToMessageId
+                                waitedMessage.executeTelegramMessageId = execute(sendVoice).messageId
+                                messageService.update(
+                                    waitedMessage.telegramMessageId,
+                                    waitedMessage.executeTelegramMessageId!!
                                 )
                             }
 
                             AttachmentContentType.STICKER -> {
-
+                                val sendSticker = SendSticker(
+                                    waitedMessage.toChatId.toString(),
+                                    InputFile(File(attachment.pathName))
+                                )
+                                sendSticker.replyToMessageId = replyToMessageId
+                                waitedMessage.executeTelegramMessageId = execute(sendSticker).messageId
+                                messageService.update(
+                                    waitedMessage.telegramMessageId,
+                                    waitedMessage.executeTelegramMessageId!!
+                                )
                             }
                         }
                     }
@@ -719,6 +645,7 @@ class TelegramBot(
             }
         }
     }
+
 
     private fun getReplyMessageTgId(message: Message): Int? {
         return if (message.isReply)
@@ -729,7 +656,6 @@ class TelegramBot(
 
     private fun getContact(tgUser: User, contact: Contact) {
         val phoneNumber = contact.phoneNumber
-//        tgUser.name = contact.firstName + " " + contact.lastName
         contact.run {
             tgUser.name = ""
             firstName?.let { tgUser.name += firstName }
@@ -750,30 +676,29 @@ class TelegramBot(
         button.text = "1"
         button.callbackData = "1" + session.id
         row.add(button)
-        rows.add(row)
 
-        row = mutableListOf()
+
+
         button = InlineKeyboardButton()
         button.text = "2"
         button.callbackData = "2" + session.id
         row.add(button)
-        rows.add(row)
 
-        row = mutableListOf()
+
+
         button = InlineKeyboardButton()
         button.text = "3"
         button.callbackData = "3" + session.id
         row.add(button)
-        rows.add(row)
 
-        row = mutableListOf()
+
+
         button = InlineKeyboardButton()
         button.text = "4"
         button.callbackData = "4" + session.id
         row.add(button)
-        rows.add(row)
 
-        row = mutableListOf()
+
         button = InlineKeyboardButton()
         button.text = "5"
         button.callbackData = "5" + session.id
@@ -884,17 +809,15 @@ class TelegramBot(
         button.callbackData = "UZ"
 
         row.add(button)
-        rows.add(row)
+
 
         button = InlineKeyboardButton()
-        row = mutableListOf()
         button.text = "RU \uD83C\uDDF7\uD83C\uDDFA"
         button.callbackData = "RU"
         row.add(button)
-        rows.add(row)
+
 
         button = InlineKeyboardButton()
-        row = mutableListOf()
         button.text = "ENG \uD83C\uDDFA\uD83C\uDDF8"
         button.callbackData = "ENG"
         row.add(button)
@@ -925,11 +848,11 @@ class TelegramBot(
         execute(sendMessage)
     }
 
-    fun sendText(user: User, text: String) {
+    fun sendText(user: User, text: String): Message {
         val sendMessage = SendMessage()
         sendMessage.text = text
         sendMessage.chatId = user.chatId
-        execute(sendMessage)
+        return execute(sendMessage)
     }
 
     fun userMenu(user: User) {
@@ -970,9 +893,4 @@ class TelegramBot(
         RestTemplate().getForObject<ByteArray>("https://api.telegram.org/file/bot${token}/${filePath}")
     }
 
-
-    fun sendNotificationToOperator(chatId: String) {
-
-
-    }
 }
