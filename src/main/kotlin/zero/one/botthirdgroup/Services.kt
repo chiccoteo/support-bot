@@ -297,7 +297,10 @@ class MessageServiceImpl(
         sessionRepo.findAllByStatusTrueAndSessionLanguageInAndOperatorIsNullOrderByTime(operator?.languages).let {
             if (it.isNotEmpty()) {
                 it[0]?.let { session ->
-                    if (session.user.id != operator?.id) {
+                    if (session.user.id == operator?.id) {
+                        session.status = false
+                        sessionRepo.save(session)
+                    } else {
                         session.operator = operator
                         sessionRepo.save(session)
                         val messages = messageRepo.findAllBySessionAndDeletedFalseOrderByTime(session)
