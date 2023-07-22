@@ -20,9 +20,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
 import java.io.ByteArrayInputStream
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.sql.Timestamp
@@ -36,7 +33,7 @@ class TelegramBot(
     private val languageRepository: LanguageRepository,
     private val messageService: MessageService,
     private val attachmentRepo: AttachmentRepository,
-    private val messageSourceService: MessageSourceService,
+    private val messageSourceService: MessageSourceService
 ) : TelegramLongPollingBot() {
 
     @Value("\${telegram.bot.username}")
@@ -53,21 +50,11 @@ class TelegramBot(
 
         val user = userService.createOrTgUser(update.getChatId())
 
-        val groupId = -1001689721556;
-
-
         if (update.hasMessage()) {
             val message = update.message
             val userLang: LanguageEnum = user.languages[0].name
             if (message.hasText()) {
                 val text = message.text
-
-
-
-
-                execute(SendMessage(groupId.toString(), text))
-
-
                 if (text.equals("/start")) {
                     if (user.role == Role.OPERATOR) {
                         if (user.botState != BotState.SESSION)
@@ -274,12 +261,6 @@ class TelegramBot(
                 }
             } else if (message.hasPhoto()) {
                 val photo = message.photo.last()
-//                val bytes = getFromTelegram(photo.fileId, token)
-//
-//
-//                val sendPhotoToGroup = sendPhotoToGroup(photo.fileId)
-//                println(sendPhotoToGroup)
-
                 val create = create(photo.fileId, "asd.png", AttachmentContentType.PHOTO)
                 val messageDTO = messageService.create(
                     MessageDTO(
@@ -306,11 +287,6 @@ class TelegramBot(
                 }
             } else if (message.hasDocument()) {
                 val document = message.document
-
-
-                print(document.thumb)
-
-
                 val attachment = create(document.fileId, document.fileName, AttachmentContentType.DOCUMENT)
                 val messageDTO = messageService.create(
                     MessageDTO(
@@ -336,8 +312,6 @@ class TelegramBot(
                 }
             } else if (message.hasSticker()) {
                 val sticker = message.sticker
-
-
                 var stickerType = "";
                 stickerType = if (sticker.isAnimated) "tgs"
                 else "webp"
@@ -520,8 +494,8 @@ class TelegramBot(
                 }
             }
             if (user.botState == BotState.RATING) {
-                execute(DeleteMessage(update.getChatId(), deletingMessageId))
                 messageService.ratingOperator(data.substring(1).toLong(), data.substring(0, 1).toByte())
+                execute(DeleteMessage(update.getChatId(), deletingMessageId))
                 user.botState = BotState.USER_MENU
                 userService.update(user)
                 userMenu(user)
@@ -943,21 +917,6 @@ class TelegramBot(
         )
         Files.copy(ByteArrayInputStream(fromTelegram), path)
         return attachmentRepo.save(Attachment(path.toString(), contentType))
-    }
-
-    private fun sendPhotoToGroup(fieldId: String): String? {
-        val sendPhoto = SendPhoto()
-        val groupId = -1001689721556;
-
-        sendPhoto.chatId = groupId.toString()
-        sendPhoto.photo = InputFile(fieldId)
-        return try {
-            val groupPhoto = execute(sendPhoto)
-            groupPhoto.photo.last().fileId
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
     }
 
     fun getFromTelegram(fileId: String, token: String) = execute(GetFile(fileId)).run {

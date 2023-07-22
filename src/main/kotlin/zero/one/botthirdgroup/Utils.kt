@@ -15,14 +15,6 @@ class LanguageUtil {
         }
     }
 
-    fun langBtnTxt(lang: LanguageEnum): String {
-        return when (lang) {
-            LanguageEnum.UZ -> "Kontaktingizni yuboring \uD83D\uDCDE"
-            LanguageEnum.RU -> "Отправьте свой контакт \uD83D\uDCDE"
-            LanguageEnum.ENG -> "Send your contact \uD83D\uDCDE"
-        }
-    }
-
     fun askQuestionTxt(lang: LanguageEnum): String {
         return when (lang) {
             LanguageEnum.UZ -> "Savol so'rash❓"
@@ -61,21 +53,6 @@ class LanguageUtil {
             LanguageEnum.UZ -> "Qanday savolingiz bor?"
             LanguageEnum.RU -> "Какой у вас вопрос?"
             LanguageEnum.ENG -> "What question do you have?"
-        }
-    }
-    fun closeSessionBtnTxt(lang: LanguageEnum): String {
-        return when (lang) {
-            LanguageEnum.UZ -> "Sessiyani yopish"
-            LanguageEnum.RU -> "Закрыть сеанс"
-            LanguageEnum.ENG -> "Close the session"
-        }
-    }
-
-    fun closeAndCloseOff(lang: LanguageEnum): String {
-        return when (lang) {
-            LanguageEnum.UZ -> "Sessiya ochildi"
-            LanguageEnum.RU -> "Сессия открыта"
-            LanguageEnum.ENG -> "Session opened"
         }
     }
 

@@ -23,7 +23,9 @@ interface MessageService {
 
     fun update(messageId: Int, executeMessageId: Int)
 
-    fun getReplyMessageId(messageId: Int): Int?
+    fun editMessage(editMessage: org.telegram.telegrambots.meta.api.objects.Message): Message?
+
+    fun getReplyMessageId(senderChatId: String, messageId: Int): Int?
 
     fun create(messageDTO: MessageDTO): MessageDTO?
 
@@ -160,13 +162,35 @@ class MessageServiceImpl(
         }
     }
 
-    override fun getReplyMessageId(messageId: Int): Int? {
-        messageRepo.findByTelegramMessageIdAndDeletedFalse(messageId)?.executeTelegramMessageId?.let {
+    override fun editMessage(editMessage: org.telegram.telegrambots.meta.api.objects.Message): Message? {
+        messageRepo.findByTelegramMessageIdAndDeletedFalse(editMessage.messageId)?.run {
+            text = editMessage.caption
+            if (editMessage.hasText())
+                text = editMessage.text
+            return messageRepo.save(this)
+        }
+        return null
+    }
+
+    override fun getReplyMessageId(senderChatId: String, messageId: Int): Int? {
+        val session: Session = if (userRepo.findByChatIdAndDeletedFalse(senderChatId)?.role == Role.USER)
+            sessionRepo.findByStatusTrueAndUserChatId(senderChatId)!!
+        else
+            sessionRepo.findByStatusTrueAndOperatorChatId(senderChatId)!!
+
+        messageRepo.findBySessionAndTelegramMessageIdAndDeletedFalse(
+            session,
+            messageId
+        )?.executeTelegramMessageId?.let {
             return it
         }
-        messageRepo.findByExecuteTelegramMessageIdAndDeletedFalse(messageId)?.telegramMessageId?.let {
+        messageRepo.findBySessionAndExecuteTelegramMessageIdAndDeletedFalse(
+            session,
+            messageId
+        )?.telegramMessageId?.let {
             return it
         }
+
         return null
     }
 

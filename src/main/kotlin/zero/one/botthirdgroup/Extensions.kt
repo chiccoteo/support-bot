@@ -8,6 +8,7 @@ import java.util.*
 fun Update.getChatId(): String {
     return when {
         hasMessage() -> message.chatId.toString()
+        hasEditedMessage() -> editedMessage.chatId.toString()
         hasCallbackQuery() -> callbackQuery.from.id.toString()
         else -> throw RuntimeException("Chat id not found!")
     }
