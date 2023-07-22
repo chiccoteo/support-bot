@@ -75,7 +75,7 @@ class SessionServiceImpl(
 class UserServiceImpl(
     private val userRepository: UserRepository,
     private val languageRepository: LanguageRepository,
-    private val messageSourceService: MessageSourceService
+    private val messageSourceService: MessageSourceService,
 ) : UserService {
 
     @Value("\${telegram.bot.token}")
@@ -279,16 +279,19 @@ class MessageServiceImpl(
         sessionRepo.findAllByStatusTrueAndSessionLanguageInAndOperatorIsNullOrderByTime(operator?.languages).let {
             if (it.isNotEmpty()) {
                 it[0]?.let { session ->
-                    session.operator = operator
-                    sessionRepo.save(session)
-                    val messages = messageRepo.findAllBySessionAndDeletedFalseOrderByTime(session)
-                    messageDTOs = messages.map { message ->
-                        toDTO(
-                            message,
-                            chatId,
-                            message.attachment
-                        )
+                    if (session.user.id != operator?.id) {
+                        session.operator = operator
+                        sessionRepo.save(session)
+                        val messages = messageRepo.findAllBySessionAndDeletedFalseOrderByTime(session)
+                        messageDTOs = messages.map { message ->
+                            toDTO(
+                                message,
+                                chatId,
+                                message.attachment
+                            )
+                        }
                     }
+                    return messageDTOs
                 }
             }
         }
