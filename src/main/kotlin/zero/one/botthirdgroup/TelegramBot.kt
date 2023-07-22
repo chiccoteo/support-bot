@@ -164,13 +164,6 @@ class TelegramBot(
                             }
                             execute(connectingMessage)
                             sendText(user, "Operator $message")
-                            /*                            getCloseOrCloseAndOff(tgUser).let {
-                                                            it.text = "Siz " + user.name + " bilan bog'landingiz"
-                                                            connectingMessage = it
-                                                        }
-                                                        execute(connectingMessage)
-                                                       sendText(user, "Siz " + tgUser.name + " bilan bog'landingiz")
-                                      */
                         }
                         sendMessage(create, tgUser.chatId)
                         tgUser.botState = BotState.SESSION
@@ -549,7 +542,6 @@ class TelegramBot(
                     messageSourceService.getMessage(LocalizationTextKey.CONNECTED_TRUE, user.languages[0].name)
                 connectingMessage.text = sender.name + " " + message
                 execute(connectingMessage)
-                sendText(sender, user.name + " " + message)
                 sendText(sender, "Operator $message")
             }
             for (waitedMessage in it) {
