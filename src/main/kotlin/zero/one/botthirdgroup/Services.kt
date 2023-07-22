@@ -23,7 +23,9 @@ interface MessageService {
 
     fun update(messageId: Int, executeMessageId: Int)
 
-    fun getReplyMessageId(messageId: Int): Int
+    fun editMessage(editMessage: org.telegram.telegrambots.meta.api.objects.Message): Message?
+
+    fun getReplyMessageId(senderChatId: String, messageId: Int): Int?
 
     fun create(messageDTO: MessageDTO): MessageDTO?
 
@@ -75,7 +77,7 @@ class SessionServiceImpl(
 class UserServiceImpl(
     private val userRepository: UserRepository,
     private val languageRepository: LanguageRepository,
-    private val messageSourceService: MessageSourceService
+    private val messageSourceService: MessageSourceService,
 ) : UserService {
 
     @Value("\${telegram.bot.token}")
@@ -129,12 +131,6 @@ class UserServiceImpl(
             "https://api.telegram.org/bot$token/sendMessage?chat_id=${user.chatId}&text=" + message + " /start",
             String::class.java
         )
-
-        /*val restTemplate = RestTemplate()
-        restTemplate.getForObject(
-            "https://api.telegram.org/bot$token/sendMessage?chat_id=${user.chatId}&text=Siz operator qilib tayinlandingiz. Iltimos /start buyrug'ini bosing",
-            String::class.java
-        )*/
     }
 
     override fun updateLang(dto: LanguageUpdateDTO) {
@@ -160,13 +156,36 @@ class MessageServiceImpl(
         }
     }
 
-    override fun getReplyMessageId(messageId: Int): Int {
-        messageRepo.findByTelegramMessageIdAndDeletedFalse(messageId)?.executeTelegramMessageId?.let {
+    override fun editMessage(editMessage: org.telegram.telegrambots.meta.api.objects.Message): Message? {
+        messageRepo.findByTelegramMessageIdAndDeletedFalse(editMessage.messageId)?.run {
+            text = editMessage.caption
+            if (editMessage.hasText())
+                text = editMessage.text
+            return messageRepo.save(this)
+        }
+        return null
+    }
+
+    override fun getReplyMessageId(senderChatId: String, messageId: Int): Int? {
+        val session: Session = if (userRepo.findByChatIdAndDeletedFalse(senderChatId)?.role == Role.USER)
+            sessionRepo.findByStatusTrueAndUserChatId(senderChatId)!!
+        else
+            sessionRepo.findByStatusTrueAndOperatorChatId(senderChatId)!!
+
+        messageRepo.findBySessionAndTelegramMessageIdAndDeletedFalse(
+            session,
+            messageId
+        )?.executeTelegramMessageId?.let {
             return it
         }
-        messageRepo.findByExecuteTelegramMessageIdAndDeletedFalse(messageId)?.telegramMessageId.let {
-            return it!!
+        messageRepo.findBySessionAndExecuteTelegramMessageIdAndDeletedFalse(
+            session,
+            messageId
+        )?.telegramMessageId?.let {
+            return it
         }
+
+        return null
     }
 
     override fun create(messageDTO: MessageDTO): MessageDTO? {
@@ -278,15 +297,17 @@ class MessageServiceImpl(
         sessionRepo.findAllByStatusTrueAndSessionLanguageInAndOperatorIsNullOrderByTime(operator?.languages).let {
             if (it.isNotEmpty()) {
                 it[0]?.let { session ->
-                    session.operator = operator
-                    sessionRepo.save(session)
-                    val messages = messageRepo.findAllBySessionAndDeletedFalseOrderByTime(session)
-                    messageDTOs = messages.map { message ->
-                        toDTO(
-                            message,
-                            chatId,
-                            message.attachment
-                        )
+                    if (session.user.id != operator?.id) {
+                        session.operator = operator
+                        sessionRepo.save(session)
+                        val messages = messageRepo.findAllBySessionAndDeletedFalseOrderByTime(session)
+                        messageDTOs = messages.map { message ->
+                            toDTO(
+                                message,
+                                chatId,
+                                message.attachment
+                            )
+                        }
                     }
                 }
             }

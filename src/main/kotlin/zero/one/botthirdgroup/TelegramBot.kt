@@ -8,6 +8,7 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.GetFile
 import org.telegram.telegrambots.meta.api.methods.send.*
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText
 import org.telegram.telegrambots.meta.api.objects.Contact
 import org.telegram.telegrambots.meta.api.objects.InputFile
 import org.telegram.telegrambots.meta.api.objects.Message
@@ -49,6 +50,19 @@ class TelegramBot(
     override fun onUpdateReceived(update: Update) {
 
         val user = userService.createOrTgUser(update.getChatId())
+
+        if (update.hasEditedMessage()) {
+            val editMessage = update.editedMessage
+            val editedMessage = messageService.editMessage(editMessage)
+            val editMessageText = EditMessageText()
+            if (editedMessage?.session?.user != editedMessage?.sender)
+                editMessageText.chatId = editedMessage?.session?.user?.chatId
+            else
+                editMessageText.chatId = editedMessage?.session?.operator?.chatId
+            editMessageText.messageId = editedMessage?.executeTelegramMessageId
+            editMessageText.text = editedMessage?.text!!
+            execute(editMessageText)
+        }
 
         if (update.hasMessage()) {
             val message = update.message
@@ -319,7 +333,7 @@ class TelegramBot(
                 val messageDTO = messageService.create(
                     MessageDTO(
                         message.messageId,
-                        null,
+                        getReplyMessageTgId(message),
                         null,
                         Timestamp(System.currentTimeMillis()),
                         user.chatId,
@@ -506,8 +520,10 @@ class TelegramBot(
     private fun sendMessage(messageDTO: MessageDTO, userChatId: String) {
         val sendMessage = SendMessage()
         if (messageDTO.replyTelegramMessageId != null) {
-            sendMessage.replyToMessageId =
-                messageService.getReplyMessageId(messageDTO.replyTelegramMessageId)
+            val replyMessageId = messageService.getReplyMessageId(messageDTO.senderChatId, messageDTO.replyTelegramMessageId)
+            // replyMessageId will be null if this message does not exist in database
+            if (replyMessageId != null)
+                sendMessage.replyToMessageId = replyMessageId
         }
         sendMessage.text = messageDTO.text.toString()
         sendMessage.chatId = userChatId
@@ -517,7 +533,7 @@ class TelegramBot(
 
     private fun getReplyToMessageId(messageDTO: MessageDTO): Int? {
         if (messageDTO.replyTelegramMessageId != null) {
-            return messageService.getReplyMessageId(messageDTO.replyTelegramMessageId)
+            return messageService.getReplyMessageId(messageDTO.senderChatId, messageDTO.replyTelegramMessageId)
         }
         return null
     }
@@ -529,14 +545,11 @@ class TelegramBot(
             userService.update(user)
             val sender = userService.createOrTgUser(waitedMessages[0].senderChatId)
             getCloseOrCloseAndOff(user).let { connectingMessage ->
-
-                /*user.telegramId, messageSourceService.getMessage(
-                LocalizationTextKey.START_MESSAGING_MESSAGE,languageService.getLanguageOfUser(message.from.id)
-                )*/
                 val message =
                     messageSourceService.getMessage(LocalizationTextKey.CONNECTED_TRUE, user.languages[0].name)
                 connectingMessage.text = sender.name + " " + message
                 execute(connectingMessage)
+                sendText(sender, user.name + " " + message)
                 sendText(sender, "Operator $message")
             }
             for (waitedMessage in it) {

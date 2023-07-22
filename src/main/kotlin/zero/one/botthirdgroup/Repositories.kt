@@ -67,7 +67,8 @@ interface SessionRepository : BaseRepository<Session> {
 
 interface MessageRepository : BaseRepository<Message> {
     fun findByTelegramMessageIdAndDeletedFalse(telegramMessageId: Int):Message?
-    fun findByExecuteTelegramMessageIdAndDeletedFalse(executeMessageId: Int):Message?
+    fun findBySessionAndTelegramMessageIdAndDeletedFalse(session: Session, telegramMessageId: Int):Message?
+    fun findBySessionAndExecuteTelegramMessageIdAndDeletedFalse(session: Session, executeMessageId: Int):Message?
     fun findAllBySessionAndDeletedFalseOrderByTime(session: Session): List<Message>
     fun findAllBySessionAndDeletedFalse(session: Session): List<Message>
 }
