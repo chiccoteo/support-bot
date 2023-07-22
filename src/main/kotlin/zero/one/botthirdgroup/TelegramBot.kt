@@ -8,6 +8,7 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.GetFile
 import org.telegram.telegrambots.meta.api.methods.send.*
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText
 import org.telegram.telegrambots.meta.api.objects.Contact
 import org.telegram.telegrambots.meta.api.objects.InputFile
 import org.telegram.telegrambots.meta.api.objects.Message
@@ -49,6 +50,19 @@ class TelegramBot(
     override fun onUpdateReceived(update: Update) {
 
         val user = userService.createOrTgUser(update.getChatId())
+
+        if (update.hasEditedMessage()) {
+            val editMessage = update.editedMessage
+            val editedMessage = messageService.editMessage(editMessage)
+            val editMessageText = EditMessageText()
+            if (editedMessage?.session?.user != editedMessage?.sender)
+                editMessageText.chatId = editedMessage?.session?.user?.chatId
+            else
+                editMessageText.chatId = editedMessage?.session?.operator?.chatId
+            editMessageText.messageId = editedMessage?.executeTelegramMessageId
+            editMessageText.text = editedMessage?.text!!
+            execute(editMessageText)
+        }
 
         if (update.hasMessage()) {
             val message = update.message
@@ -506,7 +520,7 @@ class TelegramBot(
     private fun sendMessage(messageDTO: MessageDTO, userChatId: String) {
         val sendMessage = SendMessage()
         if (messageDTO.replyTelegramMessageId != null) {
-            val replyMessageId = messageService.getReplyMessageId(messageDTO.replyTelegramMessageId)
+            val replyMessageId = messageService.getReplyMessageId(messageDTO.senderChatId, messageDTO.replyTelegramMessageId)
             // replyMessageId will be null if this message does not exist in database
             if (replyMessageId != null)
                 sendMessage.replyToMessageId = replyMessageId
@@ -519,7 +533,7 @@ class TelegramBot(
 
     private fun getReplyToMessageId(messageDTO: MessageDTO): Int? {
         if (messageDTO.replyTelegramMessageId != null) {
-            return messageService.getReplyMessageId(messageDTO.replyTelegramMessageId)
+            return messageService.getReplyMessageId(messageDTO.senderChatId, messageDTO.replyTelegramMessageId)
         }
         return null
     }
