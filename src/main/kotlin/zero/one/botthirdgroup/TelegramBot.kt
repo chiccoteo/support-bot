@@ -159,18 +159,11 @@ class TelegramBot(
                                     user.languages[0].name
                                 )
                             getCloseOrCloseAndOff(tgUser).let {
-                                it.text = message + " " + user.name
+                                it.text = user.name + " "+message
                                 connectingMessage = it
                             }
                             execute(connectingMessage)
-                            sendText(user, message + " " + tgUser.name)
-                            /*                            getCloseOrCloseAndOff(tgUser).let {
-                                                            it.text = "Siz " + user.name + " bilan bog'landingiz"
-                                                            connectingMessage = it
-                                                        }
-                                                        execute(connectingMessage)
-                                                       sendText(user, "Siz " + tgUser.name + " bilan bog'landingiz")
-                                      */
+                            sendText(user, "Operator $message")
                         }
                         sendMessage(create, tgUser.chatId)
                         tgUser.botState = BotState.SESSION
@@ -549,7 +542,7 @@ class TelegramBot(
                     messageSourceService.getMessage(LocalizationTextKey.CONNECTED_TRUE, user.languages[0].name)
                 connectingMessage.text = sender.name + " " + message
                 execute(connectingMessage)
-                sendText(sender, user.name + " " + message)
+                sendText(sender, "Operator $message")
             }
             for (waitedMessage in it) {
                 if (waitedMessage.attachment == null) {
