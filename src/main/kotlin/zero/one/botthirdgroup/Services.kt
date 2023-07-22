@@ -131,12 +131,6 @@ class UserServiceImpl(
             "https://api.telegram.org/bot$token/sendMessage?chat_id=${user.chatId}&text=" + message + " /start",
             String::class.java
         )
-
-        /*val restTemplate = RestTemplate()
-        restTemplate.getForObject(
-            "https://api.telegram.org/bot$token/sendMessage?chat_id=${user.chatId}&text=Siz operator qilib tayinlandingiz. Iltimos /start buyrug'ini bosing",
-            String::class.java
-        )*/
     }
 
     override fun updateLang(dto: LanguageUpdateDTO) {
@@ -315,7 +309,6 @@ class MessageServiceImpl(
                             )
                         }
                     }
-                    return messageDTOs
                 }
             }
         }

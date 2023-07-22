@@ -545,35 +545,11 @@ class TelegramBot(
             userService.update(user)
             val sender = userService.createOrTgUser(waitedMessages[0].senderChatId)
             getCloseOrCloseAndOff(user).let { connectingMessage ->
-
-                /*user.telegramId, messageSourceService.getMessage(
-                LocalizationTextKey.START_MESSAGING_MESSAGE,languageService.getLanguageOfUser(message.from.id)
-                )*/
                 val message =
                     messageSourceService.getMessage(LocalizationTextKey.CONNECTED_TRUE, user.languages[0].name)
                 connectingMessage.text = sender.name + " " + message
                 execute(connectingMessage)
                 sendText(sender, user.name + " " + message)
-
-                /*when {
-                    user.languages[0].name == LanguageEnum.ENG -> {
-                        connectingMessage.text = "You have contacted the " + sender.name
-                        execute(connectingMessage)
-                        sendText(sender, "You have contacted the " + user.name)
-                    }
-
-                    user.languages[0].name == LanguageEnum.RU -> {
-                        connectingMessage.text = "вы связались с " + sender.name
-                        execute(connectingMessage)
-                        sendText(sender, "вы связались с " + user.name)
-                    }
-
-                    else -> {
-                        connectingMessage.text = "Siz " + sender.name + " bilan bog'landingiz"
-                        execute(connectingMessage)
-                        sendText(sender, "Siz " + user.name + " bilan bog'landingiz")
-                    }
-                }*/
             }
             for (waitedMessage in it) {
                 if (waitedMessage.attachment == null) {
@@ -745,14 +721,6 @@ class TelegramBot(
         inlineKeyboardMarkup.keyboard = rows
 
         val sendMessage = SendMessage()
-        /*        messageSourceService.getMessage(LocalizationTextKey.RATE_THE_OPERATOR, session.sessionLanguage.name)
-                var text = ""
-                if (session.sessionLanguage.name == LanguageEnum.UZ)
-                    text = "Operatorni baholang 😀"
-                if (session.sessionLanguage.name == LanguageEnum.ENG)
-                    text = "Rate the operator 😀 "
-                if (session.sessionLanguage.name == LanguageEnum.RU)
-                    text = "Оцените оператора 😀"*/
         sendMessage.text =
             messageSourceService.getMessage(LocalizationTextKey.RATE_THE_OPERATOR, session.sessionLanguage.name)
         sendMessage.chatId = session.user.chatId
@@ -872,19 +840,6 @@ class TelegramBot(
                 "Botga xush kelibsiz. Iltimos tilni tanlang"
         if (user.botState == BotState.CHANGE_LANG) {
             text = messageSourceService.getMessage(LocalizationTextKey.CHANGE_LANGUAGE, user.languages[0].name)
-//            text = when (user.languages[0].name) {
-//                LanguageEnum.UZ -> {
-//                    "Til tanlang"
-//                }
-//
-//                LanguageEnum.RU -> {
-//                    "Выберите язык"
-//                }
-//
-//                LanguageEnum.ENG -> {
-//                    "Choose a language"
-//                }
-//            }
         }
         sendMessage.text = text
         sendMessage.chatId = user.chatId
