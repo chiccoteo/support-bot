@@ -19,6 +19,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRem
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
+import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.nio.file.Files
@@ -48,6 +49,7 @@ class TelegramBot(
     override fun getBotToken(): String = token
 
     override fun onUpdateReceived(update: Update) {
+        println(update.getChatId())
 
         val user = userService.createOrTgUser(update.getChatId())
 
@@ -76,7 +78,29 @@ class TelegramBot(
                     } else {
                         when (user.botState) {
                             BotState.START -> {
+                                user.botState = BotState.CHOOSE_LANG
+                                userService.update(user)
                                 chooseLanguage(user, message.from.firstName)
+                            }
+
+                            BotState.CHOOSE_LANG -> {
+                                sendText(
+                                    user,
+                                    messageSourceService.getMessage(
+                                        LocalizationTextKey.CHANGE_LANGUAGE,
+                                        user.languages[0].name
+                                    )
+                                )
+                            }
+
+                            BotState.CHANGE_LANG -> {
+                                sendText(
+                                    user,
+                                    messageSourceService.getMessage(
+                                        LocalizationTextKey.CHANGE_LANGUAGE,
+                                        user.languages[0].name
+                                    )
+                                )
                             }
 
                             BotState.SHARE_CONTACT -> {
@@ -88,16 +112,36 @@ class TelegramBot(
                             }
 
                             BotState.RATING -> {
-                                rateOperator(messageService.isThereNotRatedSession(update.getChatId()))
-                                messageService.closingSession(update.getChatId())
+                                sendText(
+                                    user,
+                                    messageSourceService.getMessage(
+                                        LocalizationTextKey.RATE_THE_OPERATOR,
+                                        user.languages[0].name
+                                    )
+                                )
                             }
 
                             else -> {}
                         }
                     }
+                } else if (user.botState == BotState.CHOOSE_LANG) {
+                    sendText(
+                        user,
+                        messageSourceService.getMessage(LocalizationTextKey.CHANGE_LANGUAGE, user.languages[0].name)
+                    )
+                } else if (user.botState == BotState.CHANGE_LANG) {
+                    sendText(
+                        user,
+                        messageSourceService.getMessage(LocalizationTextKey.CHANGE_LANGUAGE, user.languages[0].name)
+                    )
                 } else if (user.botState == BotState.RATING) {
-                    rateOperator(messageService.isThereNotRatedSession(update.getChatId()))
-                    messageService.closingSession(update.getChatId())
+                    sendText(
+                        user,
+                        messageSourceService.getMessage(
+                            LocalizationTextKey.RATE_THE_OPERATOR,
+                            user.languages[0].name
+                        )
+                    )
                 }
 
                 if (user.botState == BotState.USER_MENU) {
@@ -159,7 +203,7 @@ class TelegramBot(
                                     user.languages[0].name
                                 )
                             getCloseOrCloseAndOff(tgUser).let {
-                                it.text = user.name + " "+message
+                                it.text = user.name + " " + message
                                 connectingMessage = it
                             }
                             execute(connectingMessage)
@@ -452,12 +496,8 @@ class TelegramBot(
         } else if (update.hasCallbackQuery()) {
             val data = update.callbackQuery.data
             val deletingMessageId = update.callbackQuery.message.messageId
-            if (user.botState == BotState.START || user.botState == BotState.CHANGE_LANG) {
+            if (user.botState == BotState.CHOOSE_LANG || user.botState == BotState.CHANGE_LANG) {
                 execute(DeleteMessage(update.getChatId(), deletingMessageId))
-                if (user.botState == BotState.START) {
-                    user.botState = BotState.CHOOSE_LANG
-                    userService.update(user)
-                }
                 when (data) {
                     "UZ" -> {
                         user.languages = mutableListOf(languageRepository.findByName(LanguageEnum.UZ))
@@ -512,16 +552,24 @@ class TelegramBot(
 
     private fun sendMessage(messageDTO: MessageDTO, userChatId: String) {
         val sendMessage = SendMessage()
-        if (messageDTO.replyTelegramMessageId != null) {
-            val replyMessageId = messageService.getReplyMessageId(messageDTO.senderChatId, messageDTO.replyTelegramMessageId)
-            // replyMessageId will be null if this message does not exist in database
-            if (replyMessageId != null)
-                sendMessage.replyToMessageId = replyMessageId
-        }
         sendMessage.text = messageDTO.text.toString()
         sendMessage.chatId = userChatId
-        messageDTO.executeTelegramMessageId = execute(sendMessage).messageId
-        messageService.update(messageDTO.telegramMessageId, messageDTO.executeTelegramMessageId!!)
+        if (messageDTO.replyTelegramMessageId != null) {
+            val replyMessageId =
+                messageService.getReplyMessageId(messageDTO.senderChatId, messageDTO.replyTelegramMessageId)
+            if (replyMessageId != null)
+                sendMessage.replyToMessageId = replyMessageId
+            try {
+                messageDTO.executeTelegramMessageId = execute(sendMessage).messageId
+                messageService.update(messageDTO.telegramMessageId, messageDTO.executeTelegramMessageId)
+            } catch (e: TelegramApiRequestException) {
+                sendMessage.replyToMessageId = null
+                execute(sendMessage)
+            }
+        } else {
+            messageDTO.executeTelegramMessageId = execute(sendMessage).messageId
+            messageService.update(messageDTO.telegramMessageId, messageDTO.executeTelegramMessageId)
+        }
     }
 
     private fun getReplyToMessageId(messageDTO: MessageDTO): Int? {
