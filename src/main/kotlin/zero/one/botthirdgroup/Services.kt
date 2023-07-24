@@ -45,6 +45,10 @@ interface MessageService {
 
     fun isThereOneMessageInSession(userChatId: String): Boolean
 
+    fun getMessageById(messageId: Int): Message?
+
+    fun updateMessage(message: Message)
+
 }
 
 interface SessionService {
@@ -158,9 +162,7 @@ class MessageServiceImpl(
 
     override fun editMessage(editMessage: org.telegram.telegrambots.meta.api.objects.Message): Message? {
         messageRepo.findByTelegramMessageIdAndDeletedFalse(editMessage.messageId)?.run {
-            text = editMessage.caption
-            if (editMessage.hasText())
-                text = editMessage.text
+            text = editMessage.text
             return messageRepo.save(this)
         }
         return null
@@ -296,13 +298,13 @@ class MessageServiceImpl(
         var messageDTOs: List<MessageDTO>? = null
         sessionRepo.findAllByStatusTrueAndSessionLanguageInAndOperatorIsNullOrderByTime(operator?.languages).let {
             if (it.isNotEmpty()) {
-                it[0]?.let { session ->
-                    if (session.user.id == operator?.id) {
+                for (session in it) {
+                    if (session?.user?.role == Role.OPERATOR) {
                         session.status = false
                         sessionRepo.save(session)
                     } else {
-                        session.operator = operator
-                        sessionRepo.save(session)
+                        session?.operator = operator
+                        sessionRepo.save(session!!)
                         val messages = messageRepo.findAllBySessionAndDeletedFalseOrderByTime(session)
                         messageDTOs = messages.map { message ->
                             toDTO(
@@ -370,6 +372,14 @@ class MessageServiceImpl(
                 return true
         }
         return false
+    }
+
+    override fun getMessageById(messageId: Int): Message? {
+        return messageRepo.findByTelegramMessageIdAndDeletedFalse(messageId)
+    }
+
+    override fun updateMessage(message: Message) {
+        messageRepo.save(message)
     }
 
 }

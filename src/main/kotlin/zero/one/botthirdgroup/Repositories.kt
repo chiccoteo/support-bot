@@ -54,7 +54,10 @@ interface LanguageRepository : BaseRepository<Language> {
 }
 
 interface SessionRepository : BaseRepository<Session> {
-    @Query(value = "select operator_id as operatorId,avg(rate) as avgRate from Session group by operator_id", nativeQuery = true)
+    @Query(
+        value = "select operator_id as operatorId,avg(rate) as avgRate from Session group by operator_id",
+        nativeQuery = true
+    )
     fun getOperatorAvgRate(): List<OperatorAvgRateMapper>
     fun findByStatusTrueAndOperator(operator: User): Session?
     fun findByStatusTrueAndOperatorChatId(operatorChatId: String): Session?
@@ -66,11 +69,13 @@ interface SessionRepository : BaseRepository<Session> {
 }
 
 interface MessageRepository : BaseRepository<Message> {
-    fun findByTelegramMessageIdAndDeletedFalse(telegramMessageId: Int):Message?
-    fun findBySessionAndTelegramMessageIdAndDeletedFalse(session: Session, telegramMessageId: Int):Message?
-    fun findBySessionAndExecuteTelegramMessageIdAndDeletedFalse(session: Session, executeMessageId: Int):Message?
+    fun findByTelegramMessageIdAndDeletedFalse(telegramMessageId: Int): Message?
+    fun findBySessionAndTelegramMessageIdAndDeletedFalse(session: Session, telegramMessageId: Int): Message?
+    fun findBySessionAndExecuteTelegramMessageIdAndDeletedFalse(session: Session, executeMessageId: Int): Message?
     fun findAllBySessionAndDeletedFalseOrderByTime(session: Session): List<Message>
     fun findAllBySessionAndDeletedFalse(session: Session): List<Message>
 }
 
-interface AttachmentRepository : BaseRepository<Attachment>
+interface AttachmentRepository : BaseRepository<Attachment> {
+    fun findByPathNameAndDeletedFalse(pathName: String): Attachment?
+}
