@@ -21,7 +21,7 @@ interface UserService {
 
 interface MessageService {
 
-    fun update(messageId: Int, executeMessageId: Int)
+    fun update(messageId: Int, executeMessageId: Int?)
 
     fun editMessage(editMessage: org.telegram.telegrambots.meta.api.objects.Message): Message?
 
@@ -153,7 +153,7 @@ class MessageServiceImpl(
     private val messageRepo: MessageRepository,
     private val languageRepository: LanguageRepository,
 ) : MessageService {
-    override fun update(messageId: Int, executeMessageId: Int) {
+    override fun update(messageId: Int, executeMessageId: Int?) {
         messageRepo.findByTelegramMessageIdAndDeletedFalse(messageId).run {
             this?.executeTelegramMessageId = executeMessageId
             messageRepo.save(this!!)

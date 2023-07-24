@@ -56,6 +56,7 @@ class TelegramBot(
     override fun getBotToken(): String = token
 
     override fun onUpdateReceived(update: Update) {
+        println(update.getChatId())
 
         val user = userService.createOrTgUser(update.getChatId())
 
@@ -88,7 +89,29 @@ class TelegramBot(
                     } else {
                         when (user.botState) {
                             BotState.START -> {
+                                user.botState = BotState.CHOOSE_LANG
+                                userService.update(user)
                                 chooseLanguage(user, message.from.firstName)
+                            }
+
+                            BotState.CHOOSE_LANG -> {
+                                sendText(
+                                    user,
+                                    messageSourceService.getMessage(
+                                        LocalizationTextKey.CHANGE_LANGUAGE,
+                                        user.languages[0].name
+                                    )
+                                )
+                            }
+
+                            BotState.CHANGE_LANG -> {
+                                sendText(
+                                    user,
+                                    messageSourceService.getMessage(
+                                        LocalizationTextKey.CHANGE_LANGUAGE,
+                                        user.languages[0].name
+                                    )
+                                )
                             }
 
                             BotState.SHARE_CONTACT -> {
@@ -100,16 +123,36 @@ class TelegramBot(
                             }
 
                             BotState.RATING -> {
-                                rateOperator(messageService.isThereNotRatedSession(update.getChatId()))
-                                messageService.closingSession(update.getChatId())
+                                sendText(
+                                    user,
+                                    messageSourceService.getMessage(
+                                        LocalizationTextKey.RATE_THE_OPERATOR,
+                                        user.languages[0].name
+                                    )
+                                )
                             }
 
                             else -> {}
                         }
                     }
+                } else if (user.botState == BotState.CHOOSE_LANG) {
+                    sendText(
+                        user,
+                        messageSourceService.getMessage(LocalizationTextKey.CHANGE_LANGUAGE, user.languages[0].name)
+                    )
+                } else if (user.botState == BotState.CHANGE_LANG) {
+                    sendText(
+                        user,
+                        messageSourceService.getMessage(LocalizationTextKey.CHANGE_LANGUAGE, user.languages[0].name)
+                    )
                 } else if (user.botState == BotState.RATING) {
-                    rateOperator(messageService.isThereNotRatedSession(update.getChatId()))
-                    messageService.closingSession(update.getChatId())
+                    sendText(
+                        user,
+                        messageSourceService.getMessage(
+                            LocalizationTextKey.RATE_THE_OPERATOR,
+                            user.languages[0].name
+                        )
+                    )
                 }
 
                 if (user.botState == BotState.USER_MENU) {
@@ -750,17 +793,25 @@ class TelegramBot(
 
     private fun sendMessage(messageDTO: MessageDTO, userChatId: String) {
         val sendMessage = SendMessage()
+        sendMessage.text = messageDTO.text.toString()
+        sendMessage.chatId = userChatId
         if (messageDTO.replyTelegramMessageId != null) {
             val replyMessageId =
                 messageService.getReplyMessageId(messageDTO.senderChatId, messageDTO.replyTelegramMessageId)
             // replyMessageId will be null if this message does not exist in database
             if (replyMessageId != null)
                 sendMessage.replyToMessageId = replyMessageId
+            try {
+                messageDTO.executeTelegramMessageId = execute(sendMessage).messageId
+                messageService.update(messageDTO.telegramMessageId, messageDTO.executeTelegramMessageId)
+            } catch (e: TelegramApiRequestException) {
+                sendMessage.replyToMessageId = null
+                execute(sendMessage)
+            }
+        } else {
+            messageDTO.executeTelegramMessageId = execute(sendMessage).messageId
+            messageService.update(messageDTO.telegramMessageId, messageDTO.executeTelegramMessageId)
         }
-        sendMessage.text = messageDTO.text.toString()
-        sendMessage.chatId = userChatId
-        messageDTO.executeTelegramMessageId = execute(sendMessage).messageId
-        messageService.update(messageDTO.telegramMessageId, messageDTO.executeTelegramMessageId!!)
     }
 
     private fun getReplyToMessageId(replyTelegramMessageId: Int?, senderChatId: String): Int? {
@@ -891,6 +942,7 @@ class TelegramBot(
             }
         }
     }
+
 
     private fun getReplyMessageTgId(message: Message): Int? {
         return if (message.isReply)
