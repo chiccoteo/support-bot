@@ -16,7 +16,7 @@ interface UserService {
     fun getUsers(pageable: Pageable): Page<GetUserDTO>
     fun getOperators(pageable: Pageable): Page<GetUserDTO>
     fun updateRole(phone: String)
-    fun updateLang(dto: LanguageUpdateDTO)
+//    fun updateLang(dto: LanguageUpdateDTO)
 }
 
 interface MessageService {
@@ -44,6 +44,10 @@ interface MessageService {
     fun isThereNotRatedSession(userChatId: String): Session
 
     fun isThereOneMessageInSession(userChatId: String): Boolean
+
+    fun getMessageById(messageId: Int): Message?
+
+    fun updateMessage(message: Message)
 
 }
 
@@ -133,13 +137,6 @@ class UserServiceImpl(
         )
     }
 
-    override fun updateLang(dto: LanguageUpdateDTO) {
-        val user = userRepository.findByPhoneNumberAndDeletedFalse(dto.phoneNumber)
-            ?: throw UserNotFoundException(dto.phoneNumber)
-        user.languages = languageRepository.findAllById(dto.languages)
-        userRepository.save(user)
-    }
-
 }
 
 @Service
@@ -158,9 +155,7 @@ class MessageServiceImpl(
 
     override fun editMessage(editMessage: org.telegram.telegrambots.meta.api.objects.Message): Message? {
         messageRepo.findByTelegramMessageIdAndDeletedFalse(editMessage.messageId)?.run {
-            text = editMessage.caption
-            if (editMessage.hasText())
-                text = editMessage.text
+            text = editMessage.text
             return messageRepo.save(this)
         }
         return null
@@ -296,13 +291,13 @@ class MessageServiceImpl(
         var messageDTOs: List<MessageDTO>? = null
         sessionRepo.findAllByStatusTrueAndSessionLanguageInAndOperatorIsNullOrderByTime(operator?.languages).let {
             if (it.isNotEmpty()) {
-                it[0]?.let { session ->
-                    if (session.user.id == operator?.id) {
+                for (session in it) {
+                    if (session?.user?.role == Role.OPERATOR) {
                         session.status = false
                         sessionRepo.save(session)
                     } else {
-                        session.operator = operator
-                        sessionRepo.save(session)
+                        session?.operator = operator
+                        sessionRepo.save(session!!)
                         val messages = messageRepo.findAllBySessionAndDeletedFalseOrderByTime(session)
                         messageDTOs = messages.map { message ->
                             toDTO(
@@ -370,6 +365,14 @@ class MessageServiceImpl(
                 return true
         }
         return false
+    }
+
+    override fun getMessageById(messageId: Int): Message? {
+        return messageRepo.findByTelegramMessageIdAndDeletedFalse(messageId)
+    }
+
+    override fun updateMessage(message: Message) {
+        messageRepo.save(message)
     }
 
 }
