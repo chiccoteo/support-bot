@@ -57,6 +57,10 @@ class TelegramBot(
 
     override fun getBotToken(): String = token
 
+    companion object {
+        var map: MutableMap<String, Int> = mutableMapOf()
+    }
+
     override fun onUpdateReceived(update: Update) {
 
         if (update.hasMyChatMember()) {
@@ -151,11 +155,13 @@ class TelegramBot(
                                 }
 
                                 BotState.CHOOSE_LANG -> {
-                                    chooseLanguage(user, message.from.firstName)
+                                    execute(DeleteMessage(update.getChatId(), map[update.getChatId()]!!))
+                                chooseLanguage(user, message.from.firstName)
                                 }
 
                                 BotState.CHANGE_LANG -> {
-                                    chooseLanguage(user, message.from.firstName)
+                                    execute(DeleteMessage(update.getChatId(), map[update.getChatId()]!!))
+                                chooseLanguage(user, message.from.firstName)
                                 }
 
                                 BotState.SHARE_CONTACT -> {
@@ -167,6 +173,7 @@ class TelegramBot(
                                 }
 
                                 BotState.RATING -> {
+                                    execute(DeleteMessage(user.chatId, map[user.chatId]!!))
                                     rateOperator(messageService.getSessionByUser(update.getChatId()))
                                 }
 
@@ -174,10 +181,13 @@ class TelegramBot(
                             }
                         }
                     } else if (user.botState == BotState.CHOOSE_LANG) {
-                        chooseLanguage(user, message.from.firstName)
+                        execute(DeleteMessage(update.getChatId(), map[update.getChatId()]!!))
+                    chooseLanguage(user, message.from.firstName)
                     } else if (user.botState == BotState.CHANGE_LANG) {
-                        chooseLanguage(user, message.from.firstName)
+                        execute(DeleteMessage(update.getChatId(), map[update.getChatId()]!!))
+                    chooseLanguage(user, message.from.firstName)
                     } else if (user.botState == BotState.RATING) {
+                        execute(DeleteMessage(user.chatId, map[user.chatId]!!))
                         rateOperator(messageService.getSessionByUser(update.getChatId()))
                     }
 
@@ -1040,6 +1050,7 @@ class TelegramBot(
         sendMessage.chatId = session.user.chatId
         sendMessage.replyMarkup = inlineKeyboardMarkup
         execute(sendMessage)
+        map[session.user.chatId] = execute.messageId
     }
 
     private fun onlineOfflineMenu(user: User, userLang: LanguageEnum) {
@@ -1159,6 +1170,7 @@ class TelegramBot(
         sendMessage.chatId = user.chatId
         sendMessage.replyMarkup = inlineKeyboardMarkup
         execute(sendMessage)
+        map[user.chatId] = execute.messageId
     }
 
     fun sendText(user: User, text: String): Message {
