@@ -27,6 +27,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
 import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException
+import org.telegram.telegrambots.meta.exceptions.TelegramApiValidationException
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.nio.file.Files
@@ -58,312 +59,339 @@ class TelegramBot(
 
     override fun onUpdateReceived(update: Update) {
 
-        val user = userService.createOrTgUser(update.getChatId())
-
-        if (update.hasEditedMessage()) {
-            val editMessage = update.editedMessage
-            if (editMessage.hasText()) {
-                val editedMessage = messageService.editMessage(editMessage)
-                val editMessageText = EditMessageText()
-                if (editedMessage?.session?.user != editedMessage?.sender)
-                    editMessageText.chatId = editedMessage?.session?.user?.chatId
-                else
-                    editMessageText.chatId = editedMessage?.session?.operator?.chatId
-                editMessageText.messageId = editedMessage?.executeTelegramMessageId
-                editMessageText.text = editedMessage?.text!!
-                execute(editMessageText)
-            } else {
-                sendSavedAndUpdateAttachments(editMessage, user)
-            }
-        }
-
-        if (update.hasMessage()) {
-            val message = update.message
-            val userLang: LanguageEnum = user.languages[0].name
-            if (message.hasText()) {
-                val text = message.text
-                if (text.equals("/start")) {
-                    if (user.role == Role.OPERATOR) {
-                        if (user.botState != BotState.SESSION)
-                            onlineOfflineMenu(user, userLang)
-                    } else {
-                        when (user.botState) {
-                            BotState.START -> {
-                                user.botState = BotState.CHOOSE_LANG
-                                userService.update(user)
-                                chooseLanguage(user, message.from.firstName)
-                            }
-
-                            BotState.CHOOSE_LANG -> {
-                                sendText(
-                                    user,
-                                    messageSourceService.getMessage(
-                                        LocalizationTextKey.CHANGE_LANGUAGE,
-                                        user.languages[0].name
-                                    )
-                                )
-                            }
-
-                            BotState.CHANGE_LANG -> {
-                                sendText(
-                                    user,
-                                    messageSourceService.getMessage(
-                                        LocalizationTextKey.CHANGE_LANGUAGE,
-                                        user.languages[0].name
-                                    )
-                                )
-                            }
-
-                            BotState.SHARE_CONTACT -> {
-                                sendContactRequest(user, languageUtil.contactButtonTxt(userLang))
-                            }
-
-                            BotState.USER_MENU -> {
-                                userMenu(user)
-                            }
-
-                            BotState.RATING -> {
-                                sendText(
-                                    user,
-                                    messageSourceService.getMessage(
-                                        LocalizationTextKey.RATE_THE_OPERATOR,
-                                        user.languages[0].name
-                                    )
-                                )
-                            }
-
-                            else -> {}
-                        }
+        if (update.hasMyChatMember()) {
+            val chatMember = update.myChatMember
+            if (chatMember.newChatMember.status == "kicked")
+                userRepository.findByChatIdAndDeletedFalse(chatMember.from.id.toString())?.let {
+                    when (it.botState) {
+                        BotState.SESSION -> it.botState = BotState.BLOCK_AFTER_SESSION
+                        BotState.ONLINE -> it.botState = BotState.BLOCK_AFTER_ONLINE
+                        BotState.ASK_QUESTION -> it.botState = BotState.BLOCK_AFTER_ASK_QUESTION
+                        BotState.OFFLINE -> it.botState = BotState.BLOCK_AFTER_OFFLINE
+                        else -> {}
                     }
-                } else if (user.botState == BotState.CHOOSE_LANG) {
-                    sendText(
-                        user,
-                        messageSourceService.getMessage(LocalizationTextKey.CHANGE_LANGUAGE, user.languages[0].name)
-                    )
-                } else if (user.botState == BotState.CHANGE_LANG) {
-                    sendText(
-                        user,
-                        messageSourceService.getMessage(LocalizationTextKey.CHANGE_LANGUAGE, user.languages[0].name)
-                    )
-                } else if (user.botState == BotState.RATING) {
-                    sendText(
-                        user,
-                        messageSourceService.getMessage(
-                            LocalizationTextKey.RATE_THE_OPERATOR,
-                            user.languages[0].name
-                        )
-                    )
+                    userRepository.save(it)
                 }
-
-                if (user.botState == BotState.USER_MENU) {
-                    if (text.equals("Savol so'rash❓") || text.equals("Задайте вопрос❓") || text.equals("Ask question❓")) {
-
-                        val message1 = SendMessage()
-                        message1.chatId = update.getChatId()
-
-                        when {
-                            (userLang == LanguageEnum.UZ && text.equals("Savol so'rash❓")) -> {
-                                message1.text = languageUtil.pleaseGiveQuestion(LanguageEnum.UZ)
-                            }
-
-                            (userLang == LanguageEnum.RU && text.equals("Задайте вопрос❓")) -> {
-                                message1.text = languageUtil.pleaseGiveQuestion(LanguageEnum.RU)
-                            }
-
-                            (userLang == LanguageEnum.ENG && text.equals("Ask question❓")) -> {
-                                message1.text = languageUtil.pleaseGiveQuestion(LanguageEnum.ENG)
-
-                            }
-
-                            else -> {
-                                message1.text = languageUtil.errorLang(userLang)
-                            }
-                        }
-
-                        val replyKeyboardRemove = ReplyKeyboardRemove(true)
-                        message1.replyMarkup = replyKeyboardRemove
-                        execute(message1)
-                        user.botState = BotState.ASK_QUESTION
-                        userService.update(user)
-                    } else if (text.equals("Sozlamalar ⚙️") || text.equals("Настройки ⚙️") || text.equals("Settings ⚙️")) {
-                        user.botState = BotState.CHANGE_LANG
-                        userService.update(user)
-                        chooseLanguage(user, message.from.firstName)
-                    }
-                }
-
-                // Sending messages for User
-                else if (user.botState == BotState.ASK_QUESTION) {
-                    val create = messageService.create(
-                        MessageDTO(
-                            message.messageId,
-                            getReplyMessageTgId(message),
-                            null,
-                            Timestamp(System.currentTimeMillis()),
-                            user.chatId, null, text, null,
-                            MessageContentType.TEXT
-                        )
-                    )
-                    if (create != null) {
-                        val tgUser = userService.createOrTgUser(create.toChatId.toString())
-                        initializeConnect(user, create)
-                        sendMessage(create, tgUser.chatId)
-                    }
-                }
-
-                if (user.role == Role.OPERATOR && user.botState != BotState.SESSION) {
-                    when (text) {
-                        "ONLINE" -> {
+            if (chatMember.newChatMember.status == "member")
+                userRepository.findByChatIdAndDeletedFalse(chatMember.from.id.toString())?.let { user ->
+                    when (user.botState) {
+                        BotState.BLOCK_AFTER_ONLINE -> {
                             user.botState = BotState.ONLINE
-                            userService.update(user)
-                            messageService.getWaitedMessages(user.chatId)?.let {
+                            userRepository.save(user)
+                            messageService.getWaitedMessages(chatMember.from.id.toString())?.let {
                                 executeWaitedMessages(it, user)
                             }
-                            if (user.botState != BotState.SESSION)
-                                onlineOfflineMenu(user, userLang)
                         }
 
-                        "OFFLINE" -> {
+                        BotState.BLOCK_AFTER_OFFLINE -> {
                             user.botState = BotState.OFFLINE
-                            userService.update(user)
-                            if (user.botState != BotState.SESSION)
-                                onlineOfflineMenu(user, userLang)
+                            userRepository.save(user)
                         }
+
+                        BotState.BLOCK_AFTER_SESSION -> {
+                            executeWaitedMessages(messageService.getWaitedMessagesBlockTime(user), user)
+                            user.botState = BotState.SESSION
+                            userRepository.save(user)
+                        }
+
+                        BotState.BLOCK_AFTER_ASK_QUESTION -> {
+                            executeWaitedMessages(messageService.getWaitedMessagesBlockTime(user), user)
+                            user.botState = BotState.ASK_QUESTION
+                            userRepository.save(user)
+                        }
+
+                        else -> {}
                     }
                 }
+        } else {
 
-                // Sending messages for Operator
-                else if (user.botState == BotState.SESSION) {
-                    val sessionByOperator = messageService.getSessionByOperator(user.chatId)
-                    val close = messageSourceService.getMessage(
-                        LocalizationTextKey.CLOSE_BT,
-                        sessionByOperator?.sessionLanguage?.name!!
-                    )
-                    val closeAndOff =
-                        messageSourceService.getMessage(
-                            LocalizationTextKey.CLOSE_AND_OFF_BT,
-                            sessionByOperator.sessionLanguage.name
-                        )
-                    if (text.equals(close) || text.equals(closeAndOff)) {
-                        if (text.equals(close)) {
-                            val session = messageService.getSessionByOperator(update.getChatId())!!
-                            rateOperator(session)
-                            messageService.closingSession(update.getChatId())
-                            user.botState = BotState.ONLINE
-                            userService.update(user)
-                            userService.createOrTgUser(session.user.chatId).run {
-                                this.botState = BotState.RATING
-                                userService.update(this)
-                            }
-                            messageService.getWaitedMessages(user.chatId)?.let {
-                                executeWaitedMessages(it, user)
+            val user = userService.createOrTgUser(update.getChatId())
+
+            if (update.hasEditedMessage()) {
+                val editMessage = update.editedMessage
+                if (editMessage.hasText()) {
+                    val editedMessage = messageService.editMessage(editMessage)
+                    val editMessageText = EditMessageText()
+                    if (editedMessage?.session?.user != editedMessage?.sender)
+                        editMessageText.chatId = editedMessage?.session?.user?.chatId
+                    else
+                        editMessageText.chatId = editedMessage?.session?.operator?.chatId
+                    editMessageText.messageId = editedMessage?.executeTelegramMessageId
+                    editMessageText.text = editedMessage?.text!!
+                    try {
+                        execute(editMessageText)
+                    } catch (ex: TelegramApiValidationException) {
+                        //
+                    }
+                } else {
+                    sendSavedAndUpdateAttachments(editMessage, user)
+                }
+            }
+
+            if (update.hasMessage()) {
+                val message = update.message
+                val userLang: LanguageEnum = user.languages[0].name
+                if (message.hasText()) {
+                    val text = message.text
+                    if (text.equals("/start")) {
+                        if (user.role == Role.OPERATOR) {
+                            if (user.botState != BotState.SESSION)
+                                onlineOfflineMenu(user, userLang)
+                            else {
+                                val closeOrCloseAndOff = getCloseOrCloseAndOff(user)
+                                closeOrCloseAndOff.text = "."
+                                execute(closeOrCloseAndOff)
                             }
                         } else {
-                            user.botState = BotState.OFFLINE
-                            userService.update(user)
-                            val session = messageService.getSessionByOperator(update.getChatId())!!
-                            rateOperator(session)
-                            messageService.closingSession(update.getChatId())
-                            userService.createOrTgUser(session.user.chatId).run {
-                                this.botState = BotState.RATING
-                                userService.update(this)
+                            when (user.botState) {
+                                BotState.START -> {
+                                    user.botState = BotState.CHOOSE_LANG
+                                    userService.update(user)
+                                    chooseLanguage(user, message.from.firstName)
+                                }
+
+                                BotState.CHOOSE_LANG -> {
+                                    chooseLanguage(user, message.from.firstName)
+                                }
+
+                                BotState.CHANGE_LANG -> {
+                                    chooseLanguage(user, message.from.firstName)
+                                }
+
+                                BotState.SHARE_CONTACT -> {
+                                    sendContactRequest(user, languageUtil.contactButtonTxt(userLang))
+                                }
+
+                                BotState.USER_MENU -> {
+                                    userMenu(user)
+                                }
+
+                                BotState.RATING -> {
+                                    rateOperator(messageService.getSessionByUser(update.getChatId()))
+                                }
+
+                                else -> {}
                             }
                         }
-                        if (user.botState != BotState.SESSION) {
-                            onlineOfflineMenu(user, userLang)
+                    } else if (user.botState == BotState.CHOOSE_LANG) {
+                        chooseLanguage(user, message.from.firstName)
+                    } else if (user.botState == BotState.CHANGE_LANG) {
+                        chooseLanguage(user, message.from.firstName)
+                    } else if (user.botState == BotState.RATING) {
+                        rateOperator(messageService.getSessionByUser(update.getChatId()))
+                    }
+
+                    if (user.botState == BotState.USER_MENU) {
+                        if (text.equals("Savol so'rash❓") || text.equals("Задайте вопрос❓") || text.equals("Ask question❓")) {
+
+                            val message1 = SendMessage()
+                            message1.chatId = update.getChatId()
+
+                            when {
+                                (userLang == LanguageEnum.UZ && text.equals("Savol so'rash❓")) -> {
+                                    message1.text = languageUtil.pleaseGiveQuestion(LanguageEnum.UZ)
+                                }
+
+                                (userLang == LanguageEnum.RU && text.equals("Задайте вопрос❓")) -> {
+                                    message1.text = languageUtil.pleaseGiveQuestion(LanguageEnum.RU)
+                                }
+
+                                (userLang == LanguageEnum.ENG && text.equals("Ask question❓")) -> {
+                                    message1.text = languageUtil.pleaseGiveQuestion(LanguageEnum.ENG)
+
+                                }
+
+                                else -> {
+                                    message1.text = languageUtil.errorLang(userLang)
+                                }
+                            }
+
+                            val replyKeyboardRemove = ReplyKeyboardRemove(true)
+                            message1.replyMarkup = replyKeyboardRemove
+                            execute(message1)
+                            user.botState = BotState.ASK_QUESTION
+                            userService.update(user)
+                        } else if (text.equals("Sozlamalar ⚙️") || text.equals("Настройки ⚙️") || text.equals("Settings ⚙️")) {
+                            user.botState = BotState.CHANGE_LANG
+                            userService.update(user)
+                            chooseLanguage(user, message.from.firstName)
                         }
-                    } else {
-                        // ONLINE text not send
+                    }
+
+                    // Sending messages for User
+                    else if (user.botState == BotState.ASK_QUESTION) {
                         val create = messageService.create(
                             MessageDTO(
                                 message.messageId,
                                 getReplyMessageTgId(message),
                                 null,
                                 Timestamp(System.currentTimeMillis()),
-                                user.chatId,
-                                null,
-                                text,
-                                null,
+                                user.chatId, null, text, null,
                                 MessageContentType.TEXT
                             )
                         )
-                        sendMessage(create!!, create.toChatId!!)
+                        if (create != null) {
+                            val tgUser = userService.createOrTgUser(create.toChatId.toString())
+                            initializeConnect(user, create)
+                            sendMessage(create, tgUser.chatId)
+                        }
                     }
-                }
-            } else if (message.hasContact()) {
-                if (user.botState == BotState.SHARE_CONTACT) {
-                    val contact = message.contact
-                    if (message.from.id == contact.userId) {
-                        getContact(user, contact)
-                    } else {
-                        sendText(
-                            user,
-                            messageSourceService.getMessage(
-                                LocalizationTextKey.PLEASE_SHARE_CONTACT,
-                                user.languages[0].name
-                            )
+
+                    if (user.role == Role.OPERATOR && user.botState != BotState.SESSION) {
+                        when (text) {
+                            "ONLINE" -> {
+                                user.botState = BotState.ONLINE
+                                userService.update(user)
+                                messageService.getWaitedMessages(user.chatId)?.let {
+                                    executeWaitedMessages(it, user)
+                                }
+                                if (user.botState != BotState.SESSION)
+                                    onlineOfflineMenu(user, userLang)
+                            }
+
+                            "OFFLINE" -> {
+                                user.botState = BotState.OFFLINE
+                                userService.update(user)
+                                if (user.botState != BotState.SESSION)
+                                    onlineOfflineMenu(user, userLang)
+                            }
+                        }
+                    }
+
+                    // Sending messages for Operator
+                    else if (user.botState == BotState.SESSION) {
+                        val sessionByOperator = messageService.getSessionByOperator(user.chatId)
+                        val close = messageSourceService.getMessage(
+                            LocalizationTextKey.CLOSE_BT,
+                            sessionByOperator?.sessionLanguage?.name!!
                         )
+                        val closeAndOff =
+                            messageSourceService.getMessage(
+                                LocalizationTextKey.CLOSE_AND_OFF_BT,
+                                sessionByOperator.sessionLanguage.name
+                            )
+                        if (text.equals(close) || text.equals(closeAndOff)) {
+                            if (text.equals(close)) {
+                                val session = messageService.getSessionByOperator(update.getChatId())!!
+                                rateOperator(session)
+                                messageService.closingSession(update.getChatId())
+                                user.botState = BotState.ONLINE
+                                userService.update(user)
+                                userService.createOrTgUser(session.user.chatId).run {
+                                    this.botState = BotState.RATING
+                                    userService.update(this)
+                                }
+                                messageService.getWaitedMessages(user.chatId)?.let {
+                                    executeWaitedMessages(it, user)
+                                }
+                            } else {
+                                user.botState = BotState.OFFLINE
+                                userService.update(user)
+                                val session = messageService.getSessionByOperator(update.getChatId())!!
+                                rateOperator(session)
+                                messageService.closingSession(update.getChatId())
+                                userService.createOrTgUser(session.user.chatId).run {
+                                    this.botState = BotState.RATING
+                                    userService.update(this)
+                                }
+                            }
+                            if (user.botState != BotState.SESSION) {
+                                onlineOfflineMenu(user, userLang)
+                            }
+                        } else {
+                            // ONLINE text not send
+                            val create = messageService.create(
+                                MessageDTO(
+                                    message.messageId,
+                                    getReplyMessageTgId(message),
+                                    null,
+                                    Timestamp(System.currentTimeMillis()),
+                                    user.chatId,
+                                    null,
+                                    text,
+                                    null,
+                                    MessageContentType.TEXT
+                                )
+                            )
+                            if (create != null)
+                                sendMessage(create, create.toChatId!!)
+                        }
                     }
+                } else if (message.hasContact()) {
+                    if (user.botState == BotState.SHARE_CONTACT) {
+                        val contact = message.contact
+                        if (message.from.id == contact.userId) {
+                            getContact(user, contact)
+                        } else {
+                            sendText(
+                                user,
+                                messageSourceService.getMessage(
+                                    LocalizationTextKey.PLEASE_SHARE_CONTACT,
+                                    user.languages[0].name
+                                )
+                            )
+                        }
 
+                    }
+                } else {
+                    if (user.botState == BotState.SESSION || user.botState == BotState.ASK_QUESTION)
+                        sendSavedAndUpdateAttachments(message, user)
                 }
-            } else {
-                if (user.botState == BotState.SESSION || user.botState == BotState.ASK_QUESTION)
-                    sendSavedAndUpdateAttachments(message, user)
-            }
 
-        } else if (update.hasCallbackQuery()) {
-            val data = update.callbackQuery.data
-            val deletingMessageId = update.callbackQuery.message.messageId
-            if (user.botState == BotState.CHOOSE_LANG || user.botState == BotState.CHANGE_LANG) {
-                execute(DeleteMessage(update.getChatId(), deletingMessageId))
-                when (data) {
-                    "UZ" -> {
-                        user.languages = mutableListOf(languageRepository.findByName(LanguageEnum.UZ))
-                        if (user.botState == BotState.CHANGE_LANG) {
-                            user.botState = BotState.USER_MENU
-                            userService.update(user)
-                            userMenu(user)
-                        } else
-                            sendContactRequest(
-                                user,
-                                languageUtil.contactButtonTxt(LanguageEnum.UZ)
-                            )
+            } else if (update.hasCallbackQuery()) {
+                val data = update.callbackQuery.data
+                val deletingMessageId = update.callbackQuery.message.messageId
+                if (user.botState == BotState.CHOOSE_LANG || user.botState == BotState.CHANGE_LANG) {
+                    execute(DeleteMessage(update.getChatId(), deletingMessageId))
+                    when (data) {
+                        "UZ" -> {
+                            user.languages = mutableListOf(languageRepository.findByName(LanguageEnum.UZ))
+                            if (user.botState == BotState.CHANGE_LANG) {
+                                user.botState = BotState.USER_MENU
+                                userService.update(user)
+                                userMenu(user)
+                            } else
+                                sendContactRequest(
+                                    user,
+                                    languageUtil.contactButtonTxt(LanguageEnum.UZ)
+                                )
+                        }
+
+                        "RU" -> {
+                            user.languages = mutableListOf(languageRepository.findByName(LanguageEnum.RU))
+                            if (user.botState == BotState.CHANGE_LANG) {
+                                user.botState = BotState.USER_MENU
+                                userService.update(user)
+                                userMenu(user)
+                            } else
+                                sendContactRequest(
+                                    user,
+                                    languageUtil.contactButtonTxt(LanguageEnum.RU)
+                                )
+                        }
+
+                        "ENG" -> {
+                            user.languages = mutableListOf(languageRepository.findByName(LanguageEnum.ENG))
+                            if (user.botState == BotState.CHANGE_LANG) {
+                                user.botState = BotState.USER_MENU
+                                userService.update(user)
+                                userMenu(user)
+                            } else
+                                sendContactRequest(
+                                    user,
+                                    languageUtil.contactButtonTxt(LanguageEnum.ENG)
+                                )
+                        }
+
                     }
-
-                    "RU" -> {
-                        user.languages = mutableListOf(languageRepository.findByName(LanguageEnum.RU))
-                        if (user.botState == BotState.CHANGE_LANG) {
-                            user.botState = BotState.USER_MENU
-                            userService.update(user)
-                            userMenu(user)
-                        } else
-                            sendContactRequest(
-                                user,
-                                languageUtil.contactButtonTxt(LanguageEnum.RU)
-                            )
-                    }
-
-                    "ENG" -> {
-                        user.languages = mutableListOf(languageRepository.findByName(LanguageEnum.ENG))
-                        if (user.botState == BotState.CHANGE_LANG) {
-                            user.botState = BotState.USER_MENU
-                            userService.update(user)
-                            userMenu(user)
-                        } else
-                            sendContactRequest(
-                                user,
-                                languageUtil.contactButtonTxt(LanguageEnum.ENG)
-                            )
-                    }
-
                 }
-            }
-            if (user.botState == BotState.RATING) {
-                messageService.ratingOperator(data.substring(1).toLong(), data.substring(0, 1).toByte())
-                execute(DeleteMessage(update.getChatId(), deletingMessageId))
-                user.botState = BotState.USER_MENU
-                userService.update(user)
-                userMenu(user)
+                if (user.botState == BotState.RATING) {
+                    messageService.ratingOperator(data.substring(1).toLong(), data.substring(0, 1).toByte())
+                    execute(DeleteMessage(update.getChatId(), deletingMessageId))
+                    user.botState = BotState.USER_MENU
+                    userService.update(user)
+                    userMenu(user)
+                }
             }
         }
     }
@@ -410,7 +438,6 @@ class TelegramBot(
         } else if (message.hasDocument()) {
             val savedMessage = messageService.getMessageById(message.messageId)
             val document = message.document
-            println(document)
             if (savedMessage == null) {
                 val attachment =
                     create(document.fileId, document.fileUniqueId, document.fileName, AttachmentContentType.DOCUMENT)
@@ -800,15 +827,22 @@ class TelegramBot(
     private fun executeWaitedMessages(waitedMessages: List<MessageDTO>, user: User) {
         waitedMessages.let {
             // session open now
-            user.botState = BotState.SESSION
-            userService.update(user)
-            val sender = userService.createOrTgUser(waitedMessages[0].senderChatId)
-            getCloseOrCloseAndOff(user).let { connectingMessage ->
-                val message =
-                    messageSourceService.getMessage(LocalizationTextKey.CONNECTED_TRUE, user.languages[0].name)
-                connectingMessage.text = sender.name + " " + message
-                execute(connectingMessage)
-                sendText(sender, "Operator $message")
+            if (user.botState != BotState.BLOCK_AFTER_SESSION && user.botState != BotState.BLOCK_AFTER_ASK_QUESTION) {
+                val sender = userService.createOrTgUser(waitedMessages[0].senderChatId)
+                getCloseOrCloseAndOff(user).let { connectingMessage ->
+                    val message =
+                        messageSourceService.getMessage(LocalizationTextKey.CONNECTED_TRUE, user.languages[0].name)
+                    connectingMessage.text = sender.name + " " + message
+                    execute(connectingMessage)
+                    sendText(sender, "Operator $message")
+                }
+            }
+            if (user.role == Role.OPERATOR) {
+                user.botState = BotState.SESSION
+                userService.update(user)
+            } else {
+                user.botState = BotState.ASK_QUESTION
+                userService.update(user)
             }
             for (waitedMessage in it) {
                 if (waitedMessage.attachment == null) {
