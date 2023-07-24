@@ -43,7 +43,8 @@ enum class MessageContentType {
     AUDIO,
     VIDEO,
     VOICE,
-    VIDEO_NOTE
+    VIDEO_NOTE,
+    DICE
 }
 
 enum class ErrorCode(val code: Int) {
