@@ -20,16 +20,21 @@ class ExceptionHandlers(
         }
     }
 }
+
 @RestController
 @RequestMapping("/api/v1/admin")
-class AdminController(private val service: UserService,
-    private val sessionService: SessionService) {
+class AdminController(
+    private val service: UserService,
+    private val sessionService: SessionService,
+    private val telegramBot: TelegramBot
+) {
     @GetMapping
     fun getAll(pageable: Pageable): Page<GetUserDTO> = service.getAll(pageable)
 
     @GetMapping("/users")
     fun getUsers(pageable: Pageable): Page<GetUserDTO> =
         service.getUsers(pageable)
+
     @GetMapping("/operators")
     fun getOperators(pageable: Pageable): Page<GetUserDTO> =
         service.getOperators(pageable)
@@ -38,8 +43,8 @@ class AdminController(private val service: UserService,
     fun updateRole(@PathVariable phone: String) = service.updateRole(phone)
 
     @PutMapping
-    fun updateLang(@RequestBody dto : LanguageUpdateDTO) = service.updateLang(dto)
+    fun updateLang(@RequestBody dto: LanguageUpdateDTO) = telegramBot.updateLang(dto)
 
     @GetMapping("getOperatorAvgRate")
-    fun getOperatorAvgRate():List<GetOperatorAvgRateDTO> = sessionService.getOperatorAvgRate()
+    fun getOperatorAvgRate(): List<GetOperatorAvgRateDTO> = sessionService.getOperatorAvgRate()
 }

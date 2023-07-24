@@ -16,7 +16,7 @@ interface UserService {
     fun getUsers(pageable: Pageable): Page<GetUserDTO>
     fun getOperators(pageable: Pageable): Page<GetUserDTO>
     fun updateRole(phone: String)
-    fun updateLang(dto: LanguageUpdateDTO)
+//    fun updateLang(dto: LanguageUpdateDTO)
 }
 
 interface MessageService {
@@ -135,13 +135,6 @@ class UserServiceImpl(
             "https://api.telegram.org/bot$token/sendMessage?chat_id=${user.chatId}&text=" + message + " /start",
             String::class.java
         )
-    }
-
-    override fun updateLang(dto: LanguageUpdateDTO) {
-        val user = userRepository.findByPhoneNumberAndDeletedFalse(dto.phoneNumber)
-            ?: throw UserNotFoundException(dto.phoneNumber)
-        user.languages = languageRepository.findAllById(dto.languages)
-        userRepository.save(user)
     }
 
 }
