@@ -59,4 +59,5 @@ class Message(
     @OneToOne var attachment: Attachment?,
     @Enumerated(EnumType.STRING) var messageType: MessageContentType,
     var text: String?,
+    var createdBlockTime: Boolean = false
 ) : BaseEntity()

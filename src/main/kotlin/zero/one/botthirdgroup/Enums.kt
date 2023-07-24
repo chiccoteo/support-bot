@@ -22,7 +22,11 @@ enum class BotState {
     SESSION,
     OFFLINE,
     RATING,
-    CHANGE_LANG
+    CHANGE_LANG,
+    BLOCK_AFTER_ONLINE,
+    BLOCK_AFTER_OFFLINE,
+    BLOCK_AFTER_SESSION,
+    BLOCK_AFTER_ASK_QUESTION
 }
 
 enum class AttachmentContentType {

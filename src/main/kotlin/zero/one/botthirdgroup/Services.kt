@@ -16,7 +16,6 @@ interface UserService {
     fun getUsers(pageable: Pageable): Page<GetUserDTO>
     fun getOperators(pageable: Pageable): Page<GetUserDTO>
     fun updateRole(phone: String)
-//    fun updateLang(dto: LanguageUpdateDTO)
 }
 
 interface MessageService {
@@ -41,6 +40,8 @@ interface MessageService {
 
     fun getSessionByOperator(operatorChatId: String): Session?
 
+    fun getSessionByUser(userChatId: String): Session
+
     fun isThereNotRatedSession(userChatId: String): Session
 
     fun isThereOneMessageInSession(userChatId: String): Boolean
@@ -48,6 +49,8 @@ interface MessageService {
     fun getMessageById(messageId: Int): Message?
 
     fun updateMessage(message: Message)
+
+    fun getWaitedMessagesBlockTime(user: User): List<MessageDTO>
 
 }
 
@@ -148,6 +151,7 @@ class MessageServiceImpl(
 ) : MessageService {
     override fun update(messageId: Int, executeMessageId: Int?) {
         messageRepo.findByTelegramMessageIdAndDeletedFalse(messageId).run {
+            this?.createdBlockTime = false
             this?.executeTelegramMessageId = executeMessageId
             messageRepo.save(this!!)
         }
@@ -189,41 +193,49 @@ class MessageServiceImpl(
             userRepo.findByChatIdAndDeletedFalse(senderChatId)?.let { senderUser ->
                 sessionRepo.findByStatusTrueAndOperator(senderUser)?.let { session ->
                     session.operator?.let {
-                        val toDTO = toDTO(
-                            messageRepo.save(
-                                Message(
-                                    telegramMessageId,
-                                    replyTelegramMessageId,
-                                    executeTelegramMessageId,
-                                    time,
-                                    session,
-                                    senderUser,
-                                    attachment,
-                                    messageType,
-                                    text
-                                )
-                            ), session.user.chatId, attachment
+                        val savedMessage = messageRepo.save(
+                            Message(
+                                telegramMessageId,
+                                replyTelegramMessageId,
+                                executeTelegramMessageId,
+                                time,
+                                session,
+                                senderUser,
+                                attachment,
+                                messageType,
+                                text,
+                                session.user.botState == BotState.BLOCK_AFTER_ASK_QUESTION
+                            )
                         )
-                        result = toDTO
+                        if (!savedMessage.createdBlockTime) {
+                            val toDTO = toDTO(
+                                savedMessage, session.user.chatId, attachment
+                            )
+                            result = toDTO
+                        }
                     }
                 } ?: sessionRepo.findByStatusTrueAndUser(senderUser)?.let { session ->
                     session.operator?.let {
-                        val toDTO = toDTO(
-                            messageRepo.save(
-                                Message(
-                                    telegramMessageId,
-                                    replyTelegramMessageId,
-                                    executeTelegramMessageId,
-                                    time,
-                                    session,
-                                    senderUser,
-                                    attachment,
-                                    messageType,
-                                    text
-                                )
-                            ), session.operator?.chatId, attachment
+                        val savedMessage = messageRepo.save(
+                            Message(
+                                telegramMessageId,
+                                replyTelegramMessageId,
+                                executeTelegramMessageId,
+                                time,
+                                session,
+                                senderUser,
+                                attachment,
+                                messageType,
+                                text,
+                                session.operator?.botState == BotState.BLOCK_AFTER_SESSION
+                            )
                         )
-                        result = toDTO
+                        if (!savedMessage.createdBlockTime) {
+                            val toDTO = toDTO(
+                                savedMessage, session.operator?.chatId, attachment
+                            )
+                            result = toDTO
+                        }
                     }
                 } ?: userRepo.findAllByBotStateAndLanguagesContainsAndDeletedFalse(
                     BotState.ONLINE,
@@ -306,11 +318,12 @@ class MessageServiceImpl(
                                 message.attachment
                             )
                         }
+                        return messageDTOs
                     }
                 }
             }
         }
-        return messageDTOs
+        return null
     }
 
     override fun getUserFromSession(operatorChatId: String): String {
@@ -355,6 +368,10 @@ class MessageServiceImpl(
         return sessionRepo.findByStatusTrueAndOperatorChatId(operatorChatId)!!
     }
 
+    override fun getSessionByUser(userChatId: String): Session {
+        return sessionRepo.findByUserChatIdAndRate(userChatId, 0)
+    }
+
     override fun isThereNotRatedSession(userChatId: String): Session {
         return sessionRepo.findByUserChatIdAndRateAndDeletedFalse(userChatId, 0)
     }
@@ -373,6 +390,23 @@ class MessageServiceImpl(
 
     override fun updateMessage(message: Message) {
         messageRepo.save(message)
+    }
+
+    override fun getWaitedMessagesBlockTime(user: User): List<MessageDTO> {
+        var messages = listOf<MessageDTO>()
+        val session: Session = if (user.role == Role.OPERATOR)
+            sessionRepo.findByStatusTrueAndOperator(user)!!
+        else
+            sessionRepo.findByStatusTrueAndUser(user)!!
+        messages =
+            messageRepo.findAllBySessionAndCreatedBlockTimeTrueAndDeletedFalseOrderByTime(session).map { message ->
+                toDTO(
+                    message,
+                    user.chatId,
+                    message.attachment
+                )
+            }
+        return messages
     }
 
 }
