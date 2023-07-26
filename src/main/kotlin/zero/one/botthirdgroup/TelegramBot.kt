@@ -156,12 +156,12 @@ class TelegramBot(
 
                                 BotState.CHOOSE_LANG -> {
                                     execute(DeleteMessage(update.getChatId(), map[update.getChatId()]!!))
-                                chooseLanguage(user, message.from.firstName)
+                                    chooseLanguage(user, message.from.firstName)
                                 }
 
                                 BotState.CHANGE_LANG -> {
                                     execute(DeleteMessage(update.getChatId(), map[update.getChatId()]!!))
-                                chooseLanguage(user, message.from.firstName)
+                                    chooseLanguage(user, message.from.firstName)
                                 }
 
                                 BotState.SHARE_CONTACT -> {
@@ -182,10 +182,10 @@ class TelegramBot(
                         }
                     } else if (user.botState == BotState.CHOOSE_LANG) {
                         execute(DeleteMessage(update.getChatId(), map[update.getChatId()]!!))
-                    chooseLanguage(user, message.from.firstName)
+                        chooseLanguage(user, message.from.firstName)
                     } else if (user.botState == BotState.CHANGE_LANG) {
                         execute(DeleteMessage(update.getChatId(), map[update.getChatId()]!!))
-                    chooseLanguage(user, message.from.firstName)
+                        chooseLanguage(user, message.from.firstName)
                     } else if (user.botState == BotState.RATING) {
                         execute(DeleteMessage(user.chatId, map[user.chatId]!!))
                         rateOperator(messageService.getSessionByUser(update.getChatId()))
@@ -1049,7 +1049,7 @@ class TelegramBot(
             messageSourceService.getMessage(LocalizationTextKey.RATE_THE_OPERATOR, session.sessionLanguage.name)
         sendMessage.chatId = session.user.chatId
         sendMessage.replyMarkup = inlineKeyboardMarkup
-        execute(sendMessage)
+        val execute = execute(sendMessage)
         map[session.user.chatId] = execute.messageId
     }
 
@@ -1169,7 +1169,7 @@ class TelegramBot(
         sendMessage.text = text
         sendMessage.chatId = user.chatId
         sendMessage.replyMarkup = inlineKeyboardMarkup
-        execute(sendMessage)
+        val execute = execute(sendMessage)
         map[user.chatId] = execute.messageId
     }
 
