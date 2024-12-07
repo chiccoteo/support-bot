@@ -44,18 +44,20 @@ class TelegramBot(
     private val userRepository: UserRepository,
     private val messageService: MessageService,
     private val attachmentRepo: AttachmentRepository,
-    private val messageSourceService: MessageSourceService
-) : TelegramLongPollingBot() {
+    private val messageSourceService: MessageSourceService,
+    @Value("\${telegram.bot.token}")
+    private val token: String = ""
+) : TelegramLongPollingBot(token) {
 
     @Value("\${telegram.bot.username}")
     private val username: String = ""
 
-    @Value("\${telegram.bot.token}")
-    private val token: String = ""
+//    @Value("\${telegram.bot.token}")
+//    private val token: String = ""
 
     override fun getBotUsername(): String = username
 
-    override fun getBotToken(): String = token
+//    override fun getBotToken(): String = token
 
     companion object {
         var map: MutableMap<String, Int> = mutableMapOf()
@@ -1210,7 +1212,7 @@ class TelegramBot(
         contentType: AttachmentContentType
     ): Attachment? {
         if (fileName == null || fileName.endsWith("MOV")) {
-            val fromTelegram = getFromTelegram(fileId, botToken) //execute( GetFile(fileId))
+            val fromTelegram = getFromTelegram(fileId, token) //execute( GetFile(fileId))
             val path = Paths.get(
                 "files/" +
                         UUID.randomUUID().toString() + "." + "mp4"
@@ -1221,7 +1223,7 @@ class TelegramBot(
             val attachment = attachmentRepo.findByPathNameAndDeletedFalse(fileName)
             if (attachment == null) {
                 val strings = fileName.split(".")
-                val fromTelegram = getFromTelegram(fileId, botToken) //execute( GetFile(fileId))
+                val fromTelegram = getFromTelegram(fileId, token) //execute( GetFile(fileId))
                 val path = Paths.get(
                     "files/" +
                             UUID.randomUUID().toString() + "." + strings[strings.size - 1]
@@ -1233,7 +1235,7 @@ class TelegramBot(
                 if (file.exists()) {
                     try {
                         file.delete()
-                        val fromTelegram = getFromTelegram(fileId, botToken)
+                        val fromTelegram = getFromTelegram(fileId, token)
                         Files.copy(ByteArrayInputStream(fromTelegram), Paths.get(fileName))
                     } catch (e: SecurityException) {
                         //

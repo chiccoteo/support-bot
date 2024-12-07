@@ -54,7 +54,7 @@ class WebMvcConfigure : WebMvcConfigurer {
     }
 }
 
-class HeaderLocaleChangeInterceptor(val headerName: String) : HandlerInterceptor {
+class HeaderLocaleChangeInterceptor(private val headerName: String) : HandlerInterceptor {
     private val logger = LogFactory.getLog(javaClass)
 
     override fun preHandle(request: HttpServletRequest, response: HttpServletResponse, handler: Any): Boolean {
@@ -73,7 +73,7 @@ class HeaderLocaleChangeInterceptor(val headerName: String) : HandlerInterceptor
 }
 
 @Component
-class Components() {
+class Components {
     @Bean
     fun messageResourceBundleMessageSource(): ResourceBundleMessageSource? {
         val messageSource = ResourceBundleMessageSource()

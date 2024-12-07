@@ -1,7 +1,6 @@
 package zero.one.botthirdgroup
 
 import org.telegram.telegrambots.meta.api.objects.Update
-import java.io.File
 import java.lang.RuntimeException
 import java.util.*
 

@@ -300,7 +300,7 @@ class MessageServiceImpl(
 
     override fun getWaitedMessages(chatId: String): List<MessageDTO>? {
         val operator = userRepo.findByChatIdAndDeletedFalse(chatId)
-        var messageDTOs: List<MessageDTO>? = null
+        var messageDTOs: List<MessageDTO>?
         sessionRepo.findAllByStatusTrueAndSessionLanguageInAndOperatorIsNullOrderByTime(operator?.languages).let {
             if (it.isNotEmpty()) {
                 for (session in it) {
@@ -393,7 +393,7 @@ class MessageServiceImpl(
     }
 
     override fun getWaitedMessagesBlockTime(user: User): List<MessageDTO> {
-        var messages = listOf<MessageDTO>()
+        val messages: List<MessageDTO>
         val session: Session = if (user.role == Role.OPERATOR)
             sessionRepo.findByStatusTrueAndOperator(user)!!
         else

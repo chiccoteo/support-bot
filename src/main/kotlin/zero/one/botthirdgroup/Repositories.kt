@@ -38,6 +38,8 @@ class BaseRepositoryImpl<T : BaseEntity>(
 
     override fun findAllNotDeleted(): List<T> = findAll(isNotDeletedSpecification)
     override fun findAllNotDeleted(pageable: Pageable): Page<T> = findAll(isNotDeletedSpecification, pageable)
+
+    @Transactional
     override fun trashList(ids: List<Long>): List<T?> = ids.map { trash(it) }
 }
 
